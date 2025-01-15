@@ -1,17 +1,12 @@
 import imaplib, email, os, sys, threading
 from email.header import decode_header
-from dotenv import load_dotenv
+from dataclasses import dataclass
 from interval.interval import ThreadJob
+import util.util as util
 
-load_dotenv()
-
-EMAIL = os.getenv("EMAIL")
-APP_PASSWORD = os.getenv("APP_PASSWORD")
-
-
-def connect_to_gmail():
+def connect_to_gmail(email, pwd):
     mail = imaplib.IMAP4_SSL("imap.gmail.com", 993)
-    mail.login(EMAIL, APP_PASSWORD)
+    mail.login(email, pwd)
     return mail
 
 
@@ -54,11 +49,10 @@ class MailChecker:
 
 
 def main():
-    if EMAIL is None or APP_PASSWORD is None:
-        print("missing env keys")
-        sys.exit(1)
-
-    mail = connect_to_gmail()
+    args = util.get_args()
+    env = util.get_env()
+    
+    mail = connect_to_gmail(env["EMAIL"], env["APP_PASSWORD"])
     mail_checker = MailChecker(mail)
     event = threading.Event()
 
