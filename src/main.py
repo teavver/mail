@@ -1,38 +1,41 @@
 import imaplib, email, threading, logging, re, sys
 from email.header import decode_header
 from interval.interval import ThreadJob
-from classes.classes import MailConfig, MailServer
+from classes.classes import MailConfig, MailHostConfig
+from imap_tools import MailBox, MailboxLoginError
+from typing import Literal
 import util.util as util
 
 # TEMP CONFIG
-MAX_HISTORY = 500
+FETCH_RECENT = 5
+FETCH_MAX = 500
 
 
-def connect_to_gmail(config: MailConfig):
-    mail = imaplib.IMAP4_SSL(config.server.host, int(config.server.port))
-    mail.login(config.email, config.pwd)
-    return mail
+type MailFetchMode = Literal["recent", "all"]
+
+
+def mail_login(config: MailConfig) -> MailBox:
+    try:
+        mail = MailBox(config.host.server, config.host.port, 60).login(config.email, config.pwd)
+        return mail
+    except MailboxLoginError as e:
+        logging.error(f"mailbox login err: {e}")
+    except Exception as e:
+        logging.error(f"mailbox login unknown err: {e}")
 
 
 class MailChecker:
-    def __init__(self, mail):
+    def __init__(self, mail: MailBox):
         self.mail = mail
         self.last_email_id = None
         self.all_email_ids = []
         self.lock = threading.Lock()
-        
-    def search_inbox(self):
-        self.mail.select("inbox", True)
-        # ok, mail_ids = self.mail.search(None, "ALL")
-        # ok, messages = self.mail.search(None, "RECENT")
-        # ok, messages = self.mail.uid("search", None, "ALL")
-        # ok, messages = self.mail.sort("REVERSE DATE", 'UTF-8', "ALL")
-        if ok != "OK":
-            logging.error(f"Failed to search mail inbox")
-            sys.exit(1)
-        # return mail_ids[0].split()[-MAX_HISTORY:]
-        print(len(messages[0]))
-        return messages[0].split()[-MAX_HISTORY:]
+
+    def fetch_inbox(self, mode: MailFetchMode):
+        limit = FETCH_MAX if mode == "all" else FETCH_RECENT
+        msgs_gen = (msg for msg in self.mail.fetch(limit=limit, reverse=True))
+        msgs = list(msgs_gen)
+        return msgs
 
     # Detect & match incoming
     def check_for_new_emails(self):
@@ -64,21 +67,22 @@ class MailChecker:
                 self.last_email_id = latest_email_id
         logging.info("-")
         return last_email_id
-    
-    def check_for_existing_emails(self): pass
+
+    def check_for_existing_emails(self):
+        pass
 
 
 def main():
     args = util.get_args()
     env = util.get_env()
 
-    server = MailServer(env["MAIL_SERVER"], env["MAIL_PORT"])
-    config = MailConfig(env["MAIL_ADDR"], env["MAIL_PWD"], server)
-    mail = connect_to_gmail(config)
+    host = MailHostConfig(env["MAIL_HOST"], env["MAIL_PORT"])
+    config = MailConfig(env["MAIL_ADDR"], env["MAIL_PWD"], host)
+    mail = mail_login(config)
+    logging.debug(mail.login_result)
     mail_checker = MailChecker(mail)
     event = threading.Event()
-    x = mail_checker.search_inbox()
-    print(len(x))
+    mail_checker.fetch_inbox("recent")
 
     # try:
     #     k = ThreadJob(lambda: mail_checker.check_for_new_emails(), event, 5)

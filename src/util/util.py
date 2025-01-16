@@ -18,7 +18,7 @@ def get_args():
 
 def get_env():
     load_dotenv()
-    required_env_keys = ["MAIL_ADDR", "MAIL_PWD", "MAIL_SERVER", "MAIL_PORT"]
+    required_env_keys = ["MAIL_ADDR", "MAIL_PWD", "MAIL_HOST", "MAIL_PORT"]
     env = {key: os.getenv(key) for key in required_env_keys}
     missing = [key for key, val in env.items() if val is None or val is ""]
     if missing:

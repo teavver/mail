@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
 @dataclass
-class MailServer:
-    host: str
+class MailHostConfig:
+    server: str
     port: str
 
 
@@ -10,4 +10,4 @@ class MailServer:
 class MailConfig:
     email: str
     pwd: str
-    server: MailServer
+    host: MailHostConfig
