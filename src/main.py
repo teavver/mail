@@ -20,8 +20,7 @@ def mail_login(config: MailConfig) -> MailBox:
         
 def callback(name: str, arg: str):
     try:
-        cmd = f"python {name} '{arg}'"
-        res = os.system(cmd)
+        res = subprocess.call(["python", name, f"{arg}"])
         print(res)
     except Exception as e:
         logging.error(f"err during call_proc: {e}")
@@ -30,6 +29,8 @@ def callback(name: str, arg: str):
 def main():
     env = util.get_env()
     args = util.get_args()
+    conf = util.parse_config()
+    return
 
     valid_pattern = util.test_regex(args.pattern)
     if valid_pattern == False:
@@ -43,8 +44,8 @@ def main():
     # event = threading.Event()
     msgs = mail_checker.fetch_inbox("recent")
     matching = [msg for msg in msgs if valid_pattern.match(msg.subject) is not None]
-    for msg in matching:
-        print(f"matching msg: ({msg.date_str}): {msg.subject}")
+    # for msg in matching:
+    #     print(f"matching msg: ({msg.date_str}): {msg.subject}")
     callback(env["CALLBACK_NAME"], matching[0].subject)
         
         

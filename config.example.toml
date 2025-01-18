@@ -1,0 +1,13 @@
+[mail]
+host = "imap.gmail.com"
+port = 993
+
+[[handlers]]
+name = 'test'
+run_once = true
+python_ver = 3
+
+[[handlers]]
+name = 'another test'
+run_once = false
+python_ver = 2
