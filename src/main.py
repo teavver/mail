@@ -1,13 +1,9 @@
-import imaplib, email, threading, logging, re, sys
-from email.header import decode_header
+import threading, logging, os, sys, subprocess
 from interval.interval import ThreadJob
 from classes.classes import MailConfig, MailHostConfig
 from imap_tools import MailBox, MailboxLoginError
-from typing import Literal
-import util.util as util
-
-# import mclient.mclient as MailClient
 from mclient.mclient import MailClient
+import util.util as util
 
 
 def mail_login(config: MailConfig) -> MailBox:
@@ -20,16 +16,25 @@ def mail_login(config: MailConfig) -> MailBox:
         logging.error(f"mailbox login err: {e}")
     except Exception as e:
         logging.error(f"mailbox login unknown err: {e}")
+        
+        
+def callback(name: str, arg: str):
+    try:
+        cmd = f"python {name} '{arg}'"
+        res = os.system(cmd)
+        print(res)
+    except Exception as e:
+        logging.error(f"err during call_proc: {e}")
 
 
 def main():
-    args = util.get_args()
     env = util.get_env()
+    args = util.get_args()
 
-    valid_pattern = util.test_regex(args.regex)
+    valid_pattern = util.test_regex(args.pattern)
     if valid_pattern == False:
         sys.exit(1)
-
+        
     host = MailHostConfig(env["MAIL_HOST"], env["MAIL_PORT"])
     config = MailConfig(env["MAIL_ADDR"], env["MAIL_PWD"], host)
     mail = mail_login(config)
@@ -37,8 +42,12 @@ def main():
     mail_checker = MailClient(mail, valid_pattern)
     # event = threading.Event()
     msgs = mail_checker.fetch_inbox("recent")
-    matching = [msg.subject for msg in msgs if valid_pattern.match(msg.subject) is not None]
-    print(matching)
+    matching = [msg for msg in msgs if valid_pattern.match(msg.subject) is not None]
+    for msg in matching:
+        print(f"matching msg: ({msg.date_str}): {msg.subject}")
+    callback(env["CALLBACK_NAME"], matching[0].subject)
+        
+        
     # for msg in msgs:
     #     match = valid_pattern.match(msg.subject)
     #     print(f"match: {match}")
