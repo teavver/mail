@@ -1,13 +1,20 @@
+
+[general]
+# fetch_full = 500
+# fetch_recent = 50
+
 [mail]
 host = "imap.gmail.com"
 port = 993
 
 [[handlers]]
-name = 'test'
-run_once = true
+name = "test"
+pattern = "Morele.net"
+exec_once = true
 python_ver = 3
 
 [[handlers]]
-name = 'another test'
-run_once = false
+name = "another test"
+pattern = ""
+exec_once = false
 python_ver = 2
