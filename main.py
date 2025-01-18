@@ -19,8 +19,10 @@ def main():
     args = util.get_args()
     config = util.get_config()
     
-    # host_config = MailHostConfig(config.mail.host, config.mail.port)
-    mclient = MailClient(config)
+    patterns = [util.validate_regexp(h.pattern) for h in config.handlers]
+    
+    # mclient = MailClient(config, patterns)
+    mclient = MailClient(config, patterns)
     mailbox = mclient.login(env.MAIL_ADDR, env.MAIL_PWD)
     logging.info(mailbox.login_result)
     mclient.fetch_inbox("recent")

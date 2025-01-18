@@ -1,4 +1,4 @@
-import argparse, sys, os, logging, msgspec
+import argparse, sys, os, re, logging, msgspec
 from dotenv import load_dotenv
 from .classes import EnvConfig, AppConfig
 
@@ -37,3 +37,19 @@ def get_config() -> AppConfig:
     except Exception as e:
         logging.error(f"err during parse_config: {e}")
         sys.exit(1)
+        
+
+def validate_regexp(pattern: str):
+    """make sure the user-defined regex does compile"""
+    try:
+        prog = re.compile(pattern)
+        return prog
+    except Exception as e:
+        err(e, "verify_regexp", True)
+    
+    
+# exp
+def err(msg: str, method: str = "", exit = False):
+    additional_info = f"err during {method}: " if method is not None else ""
+    logging.error(f"{additional_info}{msg}")
+    if exit: sys.exit(1)
