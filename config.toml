@@ -1,7 +1,7 @@
 
 [general]
-# fetch_full = 500
-# fetch_recent = 50
+fetch_full = 500
+fetch_recent = 50
 
 [mail]
 host = "imap.gmail.com"

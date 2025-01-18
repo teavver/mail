@@ -20,9 +20,10 @@ def main():
     config = util.get_config()
     
     host_config = MailHostConfig(config.mail.host, config.mail.port)
-    mclient = MailClient(host_config)
+    mclient = MailClient(config.general, host_config)
     mailbox = mclient.login(env.MAIL_ADDR, env.MAIL_PWD)
     logging.info(mailbox.login_result)
+    mclient.fetch_inbox("recent")
     return
     
     # msgs = mail_checker.fetch_inbox(config["general"])

@@ -1,16 +1,15 @@
-import threading, logging
+import logging
 from typing import Literal
-from .classes import MailHostConfig
 from imap_tools import MailBox, MailboxLoginError
+from .classes import MailHostConfig, GeneralAppSettings
 
 
 class MailClient:
-    def __init__(self, host_config: MailHostConfig):
+    def __init__(self, gen_settings: GeneralAppSettings, host_config: MailHostConfig):
+        self.settings = gen_settings
         self.mailbox = None
         self.host_config = host_config
-        self.last_email_id = None
-        self.all_email_ids = []
-        self.lock = threading.Lock()
+        self.uids = []
 
     def login(self, login, pwd) -> MailBox:
         try:
@@ -25,11 +24,10 @@ class MailClient:
             logging.error(f"mailbox login unknown err: {e}")
 
     def fetch_inbox(self, mode: Literal["recent", "all"]):
-        limit = 500 if mode == "all" else 50  # TODO: FIOX
+        limit = self.settings.fetch_full if mode == "all" else self.settings.fetch_recent
         msgs_gen = (
-            msg for msg in self.mail.fetch(limit=limit, reverse=True, charset="UTF-8")
+            msg for msg in self.mailbox.fetch(limit=limit, reverse=True, charset="UTF-8")
         )
-        return list(msgs_gen)
-
-    def check_for_existing_emails(self):
-        pass
+        msgs = list(msgs_gen)
+        self.uids = [msg.uid for msg in msgs]
+        return msgs
