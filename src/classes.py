@@ -55,6 +55,9 @@ class CallbackHandlerConfig(Struct):
             f"Callback '{self.name}':\n{json.dumps(self.__serialize(), indent=2)}"
         )
 
+    def get_pattern(self):
+        return self.__pattern
+
 
 class GeneralAppSettings(Struct):
     fetch_full: int = Defaults.FETCH_FULL

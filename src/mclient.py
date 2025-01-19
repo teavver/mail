@@ -2,7 +2,7 @@ import logging
 from .classes import AppConfig, CallbackHandlerConfig
 from typing import Literal, Tuple, List
 from imap_tools import MailBox, MailMessage, MailboxLoginError
-from re import Pattern
+from itertools import filterfalse
 
 
 class MailClient:
@@ -23,7 +23,7 @@ class MailClient:
         except Exception as e:
             logging.error(f"mailbox login unknown err: {e}")
 
-    def fetch_inbox(self, mode: Literal["recent", "all"]) -> Tuple[List[MailMessage], ]:
+    def fetch_inbox(self, mode: Literal["recent", "all"]) -> Tuple[List[MailMessage]]:
         limit = (
             self.config.general.fetch_full
             if mode == "all"
@@ -33,22 +33,27 @@ class MailClient:
             msg
             for msg in self.mailbox.fetch(limit=limit, reverse=True, charset="UTF-8")
         )
-        x = self.config.handlers[0]
-        print(f"test: {x}")
-        # msgs, handlers = [self.eval_mail(msg) for msg in msgs_gen]
-        # self.last_uid = msgs[-1].uid
-        # print(f"msgs: {msgs}")
-        # print(f"handlers: {handlers}")
-        # return (msgs, handlers)
+        eval_msgs = tuple([self.eval_mail(msg) for msg in msgs_gen])
+        msgs = list(filterfalse(lambda x: x is None, eval_msgs))
+        msgs, handlers = zip(*msgs) if msgs else (None, None)
+        
+        # TEMP
+        for idx, h in enumerate(handlers):
+            if h is not None:
+                print(f"--> IDX: {idx} msg: {msgs[idx]}, ---- handler: {h}")
+            
+        #
+        self.last_uid = msgs[-1].uid
+        return msgs
 
-    # def eval_mail(self, mail: MailMessage) -> Tuple[MailMessage, CallbackHandlerConfig | None]:
-    #     try:
-    #         for handler in self.config.handlers:
-    #             res = handler.pattern.match(mail.subject)
-    #             if res:
-    #                 # logging.debug(f"eval: - subject: {mail.subject} - res: {res}")
-    #                 return (mail, handler)
-    #         return (mail, None)
-    #     except Exception as e:
-    #         logging.error(f"fail during eval_mail: {e}")
-    #         return None
+    def eval_mail(self, mail: MailMessage) -> Tuple[MailMessage, CallbackHandlerConfig | None]:
+        try:
+            for handler in self.config.handlers:
+                res = handler.get_pattern().match(mail.subject)
+                if res:
+                    logging.debug(f"eval: - subject: {mail.subject} - res: {res}")
+                    return (mail, handler)
+            return (mail, None)
+        except Exception as e:
+            logging.error(f"fail during eval_mail: {e}")
+            return None
