@@ -1,46 +1,30 @@
-import threading, logging, os, sys, subprocess
-from imap_tools import MailBox, MailboxLoginError
-from src.interval import ThreadJob
-from src.classes import MailClient, MailHostConfig, EnvConfig
-from src.mclient import MailClient
+import logging
 import src.util as util
-
-
-def callback(name: str, arg: str):
-    try:
-        res = subprocess.call(["python", name, f"{arg}"])
-        print(res)
-    except Exception as e:
-        logging.error(f"err during call_proc: {e}")
+from src.classes import MailClient, EnvConfig, AppConfig
+from src.mclient import MailClient
+from src.interactive import InteractiveMode
 
 
 def main():
-    env = util.get_env()
+    env: EnvConfig = util.get_env()
     args = util.get_args()
-    config = util.get_config()
+    config: AppConfig = util.get_config()
     mclient = MailClient(config)
-    
     mailbox = mclient.login(env.MAIL_ADDR, env.MAIL_PWD)
     logging.info(mailbox.login_result)
-    mclient.fetch_inbox("recent")
-    
-    return
-    
-    # msgs = mail_checker.fetch_inbox(config["general"])
-    # for msg in matching:
-    #     print(f"matching msg: ({msg.date_str}): {msg.subject}")
-    # callback(env["CALLBACK_NAME"], matching[0].subject)
-        
-    # event = threading.Event()    
-    # for msg in msgs:
-    #     match = valid_pattern.match(msg.subject)
-    #     print(f"match: {match}")
-    # logging.debug(f"matching mails: {matching}")
 
-    # try:
-    #     k = ThreadJob(lambda: mail_checker.check_for_new_emails(), event, 5)
-    #     k.start()
-    #     logging.info("- run app ok")
+    mclient.fetch_inbox("recent")
+    logging.info("initial fetch complete")
+
+    # interactive mode
+    if args.interactive:
+        logging.info(f"starting interactive mode...")
+        im = InteractiveMode(mclient.msgs, mclient.handlers)
+        im.run()
+
+    # TODO: handlers -> scripts
+    # regex -> regexp
+    logging.info("auto mode")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-import argparse, sys, os, re, logging, msgspec
+import argparse, sys, os, logging, msgspec
 from dotenv import load_dotenv
 from .classes import EnvConfig, AppConfig
 
@@ -6,6 +6,7 @@ from .classes import EnvConfig, AppConfig
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument("-im", "--interactive", action="store_true")
     args = parser.parse_args()
     logging.basicConfig(
         level=logging.DEBUG if args.debug else logging.INFO,
@@ -37,10 +38,3 @@ def get_config() -> AppConfig:
     except Exception as e:
         logging.error(f"err during parse_config: {e}")
         sys.exit(1)
-    
-    
-# exp
-def err(msg: str, method: str = "", exit = False):
-    additional_info = f"err during {method}: " if method is not None else ""
-    logging.error(f"{additional_info}{msg}")
-    if exit: sys.exit(1)
