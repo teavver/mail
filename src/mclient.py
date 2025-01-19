@@ -1,8 +1,7 @@
 import logging, subprocess, os
 from .classes import AppConfig, CallbackHandlerConfig
-from typing import Literal, Tuple, List
+from typing import Literal, Tuple
 from imap_tools import MailBox, MailMessage, MailboxLoginError
-from itertools import filterfalse
 
 
 class MailClient:
@@ -23,7 +22,7 @@ class MailClient:
         except Exception as e:
             logging.error(f"mailbox login unknown err: {e}")
 
-    def fetch_inbox(self, mode: Literal["recent", "all"]) -> Tuple[List[MailMessage]]:
+    def fetch_inbox(self, mode: Literal["recent", "all"]):
         limit = (
             self.config.general.fetch_full
             if mode == "all"
@@ -33,27 +32,36 @@ class MailClient:
             msg
             for msg in self.mailbox.fetch(limit=limit, reverse=True, charset="UTF-8")
         )
-        eval_msgs = tuple([self.eval_mail(msg) for msg in msgs_gen])
-        msgs = list(filterfalse(lambda x: x is None, eval_msgs))
-        msgs, handlers = zip(*msgs) if msgs else (None, None)
-        
-        # TEMP
-        for idx, handler in enumerate(handlers):
-            if handler is not None:
-                print(f"--> IDX: {idx} msg: {msgs[idx]}, ---- handler: {handler}")
-                try:
-                    assert(os.path.isfile(handler.exec_path), f"failed to invoke callback - path does not exist ({handler.exec_path})")
-                    py_call = "python" if handler.python_ver == 2 else "python3"
-                    res = subprocess.call([py_call, handler.exec_path])
-                    logging.debug(f"callback res: {res}")
-                except Exception as e:
-                    logging.error(f"err during test invoke callback: {e}")
-            
-        #
+        eval_msgs = tuple([self.eval_pattern(msg) for msg in msgs_gen])
+        res = [msg for msg in eval_msgs if msg is not None]
+        msgs, handlers = zip(*res) if res else (None, None)
+        assert len(msgs) == len(
+            handlers
+        ), f"(internal) msgs and handlers should be same length"
         self.last_uid = msgs[-1].uid
-        return msgs
+        # test
+        self.msgs = msgs, self.handlers = handlers
+        # return (msgs, handlers)
 
-    def eval_mail(self, mail: MailMessage) -> Tuple[MailMessage, CallbackHandlerConfig | None]:
+    # ===
+    def invoke(self, idx: int):
+        msg: MailMessage = self.msgs[idx]
+        handler: CallbackHandlerConfig = self.handlers[idx]
+        print(f"--> EXECUTE: {idx} msg: {msg.subject}, ---- handler: {handler}")
+        try:
+            assert os.path.isfile(
+                handler.exec_path
+            ), f"failed to invoke callback - path does not exist ({handler.exec_path})"
+            py_call = "python" if handler.python_ver == 2 else "python3"
+            res = subprocess.call([py_call, handler.exec_path])
+            logging.debug(f"callback res: {res}")
+            print()
+        except Exception as e:
+            logging.error(f"err during test invoke callback: {e}")
+
+    def eval_pattern(
+        self, mail: MailMessage
+    ) -> Tuple[MailMessage, CallbackHandlerConfig | None]:
         try:
             for handler in self.config.handlers:
                 res = handler.get_pattern().match(mail.subject)
