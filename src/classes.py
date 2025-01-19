@@ -1,7 +1,7 @@
 import re, sys, json, msgspec, logging
-from msgspec import Struct
+from msgspec import Struct, Meta
 from dataclasses import dataclass
-from typing import Literal, Optional
+from typing import Literal, Optional, Annotated
 
 type RegexTarget = Literal["title", "body"]
 
@@ -27,10 +27,10 @@ class MailHostConfig(Struct):
 
 
 class CallbackHandlerConfig(Struct):
-    name: str  # misc
+    name: Annotated[str, Meta(min_length=1)]
     exec_once: bool
-    exec_path: str
-    regex: str
+    exec_path: Annotated[str, Meta(min_length=2)]
+    regex: Annotated[str, Meta(min_length=1)]
     regex_target: RegexTarget = Defaults.REGEX_TYPE  # TODO ADD THIS
     python_ver: Literal[2, 3] = Defaults.PYTHON_VER
     __pattern: Optional[re.Pattern] = None

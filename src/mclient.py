@@ -1,4 +1,4 @@
-import logging
+import logging, subprocess, os
 from .classes import AppConfig, CallbackHandlerConfig
 from typing import Literal, Tuple, List
 from imap_tools import MailBox, MailMessage, MailboxLoginError
@@ -38,9 +38,16 @@ class MailClient:
         msgs, handlers = zip(*msgs) if msgs else (None, None)
         
         # TEMP
-        for idx, h in enumerate(handlers):
-            if h is not None:
-                print(f"--> IDX: {idx} msg: {msgs[idx]}, ---- handler: {h}")
+        for idx, handler in enumerate(handlers):
+            if handler is not None:
+                print(f"--> IDX: {idx} msg: {msgs[idx]}, ---- handler: {handler}")
+                try:
+                    assert(os.path.isfile(handler.exec_path), f"failed to invoke callback - path does not exist ({handler.exec_path})")
+                    py_call = "python" if handler.python_ver == 2 else "python3"
+                    res = subprocess.call([py_call, handler.exec_path])
+                    logging.debug(f"callback res: {res}")
+                except Exception as e:
+                    logging.error(f"err during test invoke callback: {e}")
             
         #
         self.last_uid = msgs[-1].uid
