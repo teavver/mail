@@ -19,10 +19,24 @@ def main():
     args = util.get_args()
     config = util.get_config()
     
-    patterns = [util.validate_regexp(h.pattern) for h in config.handlers]
+    return
     
-    # mclient = MailClient(config, patterns)
-    mclient = MailClient(config, patterns)
+    # for h in config.handlers:
+    #     # h.__pattern = util.validate_regexp(h.regex)
+    #     p = util.validate_regexp(h.regex)
+    #     h.set_pattern(p)
+        
+        
+    # # [util.validate_regexp(h.regex) for h in config.handlers]
+    
+    # for c in config.handlers:
+    #     print(c.get_pattern())
+    # return
+    
+    # [[handler.pattern = p for p in patterns] for handler in config.handlers]
+    
+    mclient = MailClient(config)
+    
     mailbox = mclient.login(env.MAIL_ADDR, env.MAIL_PWD)
     logging.info(mailbox.login_result)
     mclient.fetch_inbox("recent")

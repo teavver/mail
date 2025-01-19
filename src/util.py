@@ -37,15 +37,6 @@ def get_config() -> AppConfig:
     except Exception as e:
         logging.error(f"err during parse_config: {e}")
         sys.exit(1)
-        
-
-def validate_regexp(pattern: str):
-    """make sure the user-defined regex does compile"""
-    try:
-        prog = re.compile(pattern)
-        return prog
-    except Exception as e:
-        err(e, "verify_regexp", True)
     
     
 # exp

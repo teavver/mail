@@ -8,12 +8,14 @@ port = 993
 
 [[handlers]]
 name = "sec"
-pattern = "Google"
 exec_once = true
-python_ver = 3
+exec_path = "/Users/user/some_script.py"
+pattern = "Google"
 
 [[handlers]]
 name = "steam"
-pattern = "Steam"
 exec_once = false
-python_ver = 2
+exec_path = "..."
+pattern = "Steam"
+pattern_type = "title" # Optional, default = "title"
+python_ver = 2 # Optional, default = 3

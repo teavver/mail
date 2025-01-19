@@ -1,11 +1,14 @@
+import re, sys, json, msgspec, logging
 from msgspec import Struct
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, Optional
+
+type RegexTarget = Literal["title", "body"]
 
 
 class Defaults:
     PYTHON_VER = 3
-    PATTERN_TYPE = "title"
+    REGEX_TYPE = "title"
     FETCH_FULL = 500
     FETCH_RECENT = 50
 
@@ -24,11 +27,33 @@ class MailHostConfig(Struct):
 
 
 class CallbackHandlerConfig(Struct):
-    name: str  # folder name for lookup, must match
-    pattern: str
+    name: str  # misc
     exec_once: bool
-    pattern_type: Literal["title", "body"] = Defaults.PATTERN_TYPE
+    exec_path: str
+    regex: str
+    regex_target: RegexTarget = Defaults.REGEX_TYPE  # TODO ADD THIS
     python_ver: Literal[2, 3] = Defaults.PYTHON_VER
+    __pattern: Optional[re.Pattern] = None
+
+    def __serialize(self):
+        """TODO: override how msgspec serializes class instead of this garbage?"""
+        data = msgspec.structs.asdict(self)
+        data.pop("_CallbackHandlerConfig__pattern", None)
+        data["__pattern"] = self.__pattern.pattern if self.__pattern else None
+        return data
+
+    def __validate_regex(self) -> re.Pattern:
+        try:
+            return re.compile(self.regex)
+        except Exception as e:
+            logging.error(f"err during __validate_regex - {e}")
+            sys.exit(1)
+
+    def __post_init__(self):
+        self.__pattern = self.__validate_regex()
+        logging.debug(
+            f"Callback '{self.name}':\n{json.dumps(self.__serialize(), indent=2)}"
+        )
 
 
 class GeneralAppSettings(Struct):
@@ -42,7 +67,7 @@ class AppConfig(Struct):
     handlers: list[CallbackHandlerConfig]
 
 
-# mail
+# data
 
 
 @dataclass

@@ -2,5 +2,7 @@
 *.env
 __pycache__
 
-*callback*.py
 config.toml
+
+*callback*.py
+**/handlers/

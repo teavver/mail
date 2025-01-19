@@ -1,14 +1,13 @@
-import logging, re
-from .classes import AppConfig
-from typing import Literal
+import logging
+from .classes import AppConfig, CallbackHandlerConfig
+from typing import Literal, Tuple, List
 from imap_tools import MailBox, MailMessage, MailboxLoginError
 from re import Pattern
 
 
 class MailClient:
-    def __init__(self, config: AppConfig, patterns: list[Pattern]):
+    def __init__(self, config: AppConfig):
         self.config = config
-        self.patterns = patterns
         self.mailbox = None
         self.last_uid = None
 
@@ -24,7 +23,7 @@ class MailClient:
         except Exception as e:
             logging.error(f"mailbox login unknown err: {e}")
 
-    def fetch_inbox(self, mode: Literal["recent", "all"]):
+    def fetch_inbox(self, mode: Literal["recent", "all"]) -> Tuple[List[MailMessage], ]:
         limit = (
             self.config.general.fetch_full
             if mode == "all"
@@ -34,15 +33,22 @@ class MailClient:
             msg
             for msg in self.mailbox.fetch(limit=limit, reverse=True, charset="UTF-8")
         )
-        msgs = [self.eval_mail(msg) for msg in msgs_gen]
-        self.last_uid = msgs[-1].uid
-        return msgs
+        x = self.config.handlers[0]
+        print(f"test: {x}")
+        # msgs, handlers = [self.eval_mail(msg) for msg in msgs_gen]
+        # self.last_uid = msgs[-1].uid
+        # print(f"msgs: {msgs}")
+        # print(f"handlers: {handlers}")
+        # return (msgs, handlers)
 
-    def eval_mail(self, mail: MailMessage):
-        try:
-            for p in self.patterns:
-                res = p.match(mail.subject)
-                if res is not None: logging.debug(f"eval: - subject: {mail.subject} - res: {res}")
-            return mail
-        except Exception as e:
-            logging.error(f"fail during eval_mail: {e}")
+    # def eval_mail(self, mail: MailMessage) -> Tuple[MailMessage, CallbackHandlerConfig | None]:
+    #     try:
+    #         for handler in self.config.handlers:
+    #             res = handler.pattern.match(mail.subject)
+    #             if res:
+    #                 # logging.debug(f"eval: - subject: {mail.subject} - res: {res}")
+    #                 return (mail, handler)
+    #         return (mail, None)
+    #     except Exception as e:
+    #         logging.error(f"fail during eval_mail: {e}")
+    #         return None
