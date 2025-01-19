@@ -1,26 +1,31 @@
-import logging, os, sys, subprocess
-from src.classes import MailClient, MailHostConfig, EnvConfig
-from src.mclient import MailClient
+import logging
 import src.util as util
-
-
-def callback(name: str, arg: str):
-    try:
-        res = subprocess.call(["python", name, f"{arg}"])
-        print(res)
-    except Exception as e:
-        logging.error(f"err during call_proc: {e}")
+from src.classes import MailClient, EnvConfig, AppConfig
+from src.mclient import MailClient
+from src.interactive import InteractiveMode
 
 
 def main():
-    env = util.get_env()
+    env: EnvConfig = util.get_env()
     args = util.get_args()
-    config = util.get_config()
+    config: AppConfig = util.get_config()
     mclient = MailClient(config)
-    
     mailbox = mclient.login(env.MAIL_ADDR, env.MAIL_PWD)
     logging.info(mailbox.login_result)
+
     mclient.fetch_inbox("recent")
+    logging.info("initial fetch complete")
+
+    # interactive mode
+    if args.interactive:
+        logging.info(f"starting interactive mode...")
+        im = InteractiveMode(mclient.msgs, mclient.handlers)
+        im.run()
+
+    # TODO: handlers -> scripts
+    # regex -> regexp
+    logging.info("auto mode")
+
 
 if __name__ == "__main__":
     main()

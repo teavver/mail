@@ -2,6 +2,7 @@ import logging, subprocess, os
 from .classes import AppConfig, CallbackHandlerConfig
 from typing import Literal, Tuple
 from imap_tools import MailBox, MailMessage, MailboxLoginError
+from itertools import filterfalse
 
 
 class MailClient:
@@ -33,17 +34,16 @@ class MailClient:
             for msg in self.mailbox.fetch(limit=limit, reverse=True, charset="UTF-8")
         )
         eval_msgs = tuple([self.eval_pattern(msg) for msg in msgs_gen])
-        res = [msg for msg in eval_msgs if msg is not None]
+        res = list(filterfalse(lambda x: x is None or x[1] is None, eval_msgs))
         msgs, handlers = zip(*res) if res else (None, None)
         assert len(msgs) == len(
             handlers
         ), f"(internal) msgs and handlers should be same length"
         self.last_uid = msgs[-1].uid
-        # test
-        self.msgs = msgs, self.handlers = handlers
+        self.msgs = msgs
+        self.handlers = handlers
         # return (msgs, handlers)
 
-    # ===
     def invoke(self, idx: int):
         msg: MailMessage = self.msgs[idx]
         handler: CallbackHandlerConfig = self.handlers[idx]
