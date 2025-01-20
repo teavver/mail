@@ -6,7 +6,7 @@ from .classes import EnvConfig, AppConfig
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action="store_true")
-    parser.add_argument("-im", "--interactive", action="store_true")
+    # parser.add_argument("-im", "--interactive", action="store_true") # TODO: no, tkinter is better.
     args = parser.parse_args()
     logging.basicConfig(
         level=logging.DEBUG if args.debug else logging.INFO,

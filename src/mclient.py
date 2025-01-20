@@ -1,6 +1,6 @@
 import logging, subprocess, os
-from .classes import AppConfig, CallbackHandlerConfig
-from typing import Literal, Tuple
+from .classes import AppConfig, ScriptConfig
+from typing import Literal, Tuple, cast
 from imap_tools import MailBox, MailMessage, MailboxLoginError
 from itertools import filterfalse
 
@@ -10,6 +10,21 @@ class MailClient:
         self.config = config
         self.mailbox = None
         self.last_uid = None
+        self.matches = []
+
+    def __eval_pattern(
+        self, mail: MailMessage
+    ) -> Tuple[MailMessage, ScriptConfig | None]:
+        try:
+            for script in self.config.scripts:
+                res = script.get_pattern().match(mail.subject)
+                if res:
+                    logging.debug(f"eval: - subject: {mail.subject} - res: {res}")
+                    return (mail, script)
+            return (mail, None)
+        except Exception as e:
+            logging.error(f"fail during eval_mail: {e}")
+            return None
 
     def login(self, login, pwd) -> MailBox:
         try:
@@ -17,11 +32,14 @@ class MailClient:
                 login, pwd
             )
             self.mailbox = mail
+            logging.info(f"mailbox login success")
             return mail
         except MailboxLoginError as e:
             logging.error(f"mailbox login err: {e}")
+            return None
         except Exception as e:
             logging.error(f"mailbox login unknown err: {e}")
+            return None
 
     def fetch_inbox(self, mode: Literal["recent", "all"]):
         limit = (
@@ -33,42 +51,26 @@ class MailClient:
             msg
             for msg in self.mailbox.fetch(limit=limit, reverse=True, charset="UTF-8")
         )
-        eval_msgs = tuple([self.eval_pattern(msg) for msg in msgs_gen])
-        res = list(filterfalse(lambda x: x is None or x[1] is None, eval_msgs))
-        msgs, handlers = zip(*res) if res else (None, None)
-        assert len(msgs) == len(
-            handlers
-        ), f"(internal) msgs and handlers should be same length"
-        self.last_uid = msgs[-1].uid
-        self.msgs = msgs
-        self.handlers = handlers
-        # return (msgs, handlers)
+        eval_msgs = tuple([self.__eval_pattern(msg) for msg in msgs_gen])
+        self.matches = list(filterfalse(lambda x: x is None or x[1] is None, eval_msgs))
+        self.last_uid = self.matches[-1][0].uid
 
     def invoke(self, idx: int):
-        msg: MailMessage = self.msgs[idx]
-        handler: CallbackHandlerConfig = self.handlers[idx]
-        print(f"--> EXECUTE: {idx} msg: {msg.subject}, ---- handler: {handler}")
+        msg, script = cast(tuple[MailMessage, ScriptConfig], self.matches[idx])
+        logging.debug(
+            f"--> INVOKE: idx={idx} msg={msg.subject}, script={script.exec_path}"
+        )
         try:
             assert os.path.isfile(
-                handler.exec_path
-            ), f"failed to invoke callback - path does not exist ({handler.exec_path})"
-            py_call = "python" if handler.python_ver == 2 else "python3"
-            res = subprocess.call([py_call, handler.exec_path])
-            logging.debug(f"callback res: {res}")
+                script.exec_path
+            ), f"failed to call script - path does not exist ({script.exec_path=})"
+            py_call = "python" if script.python_ver == 2 else "python3"
+            res = subprocess.call([py_call, script.exec_path])
+            logging.debug(f"script res: {res}")
             print()
         except Exception as e:
-            logging.error(f"err during test invoke callback: {e}")
+            logging.error(f"err during test invoke script: {e}")
 
-    def eval_pattern(
-        self, mail: MailMessage
-    ) -> Tuple[MailMessage, CallbackHandlerConfig | None]:
-        try:
-            for handler in self.config.handlers:
-                res = handler.get_pattern().match(mail.subject)
-                if res:
-                    logging.debug(f"eval: - subject: {mail.subject} - res: {res}")
-                    return (mail, handler)
-            return (mail, None)
-        except Exception as e:
-            logging.error(f"fail during eval_mail: {e}")
-            return None
+    def run_auto(self):
+        for idx, _ in enumerate(self.matches):
+            self.invoke(idx)

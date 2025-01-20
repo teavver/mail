@@ -1,8 +1,7 @@
 *venv
 *.env
 __pycache__
-
+*.egg-info
 config.toml
-
-*callback*.py
-**/handlers/
+*test*.py
+**/scripts/
