@@ -10,6 +10,21 @@ class MailClient:
         self.config = config
         self.mailbox = None
         self.last_uid = None
+        self.matches = []
+
+    def __eval_pattern(
+        self, mail: MailMessage
+    ) -> Tuple[MailMessage, ScriptConfig | None]:
+        try:
+            for script in self.config.scripts:
+                res = script.get_pattern().match(mail.subject)
+                if res:
+                    logging.debug(f"eval: - subject: {mail.subject} - res: {res}")
+                    return (mail, script)
+            return (mail, None)
+        except Exception as e:
+            logging.error(f"fail during eval_mail: {e}")
+            return None
 
     def login(self, login, pwd) -> MailBox:
         try:
@@ -36,20 +51,17 @@ class MailClient:
             msg
             for msg in self.mailbox.fetch(limit=limit, reverse=True, charset="UTF-8")
         )
-        eval_msgs = tuple([self.eval_pattern(msg) for msg in msgs_gen])
-        res = list(filterfalse(lambda x: x is None or x[1] is None, eval_msgs))
-        msgs, scripts = zip(*res) if res else (None, None)
-        assert len(msgs) == len(
-            scripts
-        ), f"(internal) 'msgs' and 'scripts' should be same length"
-        self.last_uid = msgs[-1].uid
-        self.msgs = msgs
-        self.scripts = scripts
+        eval_msgs = tuple([self.__eval_pattern(msg) for msg in msgs_gen])
+        self.matches = list(filterfalse(lambda x: x is None or x[1] is None, eval_msgs))
+        self.last_uid = self.matches[-1][0].uid
 
     def invoke(self, idx: int):
-        msg: MailMessage = self.msgs[idx]
-        script: ScriptConfig = self.scripts[idx]
-        print(f"--> EXECUTE: {idx} msg: {msg.subject}, ---- script: {script}")
+        msg: MailMessage
+        script: ScriptConfig
+        msg, script = self.matches[idx]
+        logging.debug(
+            f"--> INVOKE: idx={idx} msg={msg.subject}, script={script.exec_path}"
+        )
         try:
             assert os.path.isfile(
                 script.exec_path
@@ -61,16 +73,6 @@ class MailClient:
         except Exception as e:
             logging.error(f"err during test invoke script: {e}")
 
-    def eval_pattern(
-        self, mail: MailMessage
-    ) -> Tuple[MailMessage, ScriptConfig | None]:
-        try:
-            for script in self.config.scripts:
-                res = script.get_pattern().match(mail.subject)
-                if res:
-                    logging.debug(f"eval: - subject: {mail.subject} - res: {res}")
-                    return (mail, script)
-            return (mail, None)
-        except Exception as e:
-            logging.error(f"fail during eval_mail: {e}")
-            return None
+    def run_auto(self):
+        for idx, _ in enumerate(self.matches):
+            self.invoke(idx)

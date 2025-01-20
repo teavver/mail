@@ -18,7 +18,7 @@ def main():
     mclient.fetch_inbox("recent")
     logging.info("initial fetch complete")
     
-    
+    mclient.run_auto()
     logging.info("done")
     
 
