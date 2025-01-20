@@ -1,8 +1,7 @@
-import logging
+import logging, sys
 import src.util as util
 from src.classes import MailClient, EnvConfig, AppConfig
 from src.mclient import MailClient
-from src.interactive import InteractiveMode
 
 
 def main():
@@ -11,20 +10,17 @@ def main():
     config: AppConfig = util.get_config()
     mclient = MailClient(config)
     mailbox = mclient.login(env.MAIL_ADDR, env.MAIL_PWD)
-    logging.info(mailbox.login_result)
+    
+    if mailbox is None:
+        logging.error("mailbox login failed")
+        sys.exit(1)
 
     mclient.fetch_inbox("recent")
     logging.info("initial fetch complete")
-
-    # interactive mode
-    if args.interactive:
-        logging.info(f"starting interactive mode...")
-        im = InteractiveMode(mclient.msgs, mclient.handlers)
-        im.run()
-
-    # TODO: handlers -> scripts
-    # regex -> regexp
-    logging.info("auto mode")
+    
+    
+    logging.info("done")
+    
 
 
 if __name__ == "__main__":

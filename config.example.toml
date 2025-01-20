@@ -6,16 +6,16 @@ fetch_recent = 50
 host = "imap.gmail.com"
 port = 993
 
-[[handlers]]
+[[scripts]]
 name = "sec"
 exec_once = true
 exec_path = "/Users/user/some_script.py"
-pattern = "Google"
+regexp = "Google"
 
-[[handlers]]
+[[scripts]]
 name = "steam"
 exec_once = false
 exec_path = "..."
-pattern = "Steam"
-pattern_type = "title" # Optional, default = "title"
+regexp = "Steam"
+regexp_target = "title" # Optional, default = "title"
 python_ver = 2 # Optional, default = 3

@@ -2,7 +2,9 @@
 *.env
 __pycache__
 
+# config
 config.toml
 
-*callback*.py
-**/handlers/
+# experiments
+*test*.py
+**/scripts/
