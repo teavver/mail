@@ -2,18 +2,18 @@ import threading
 
 
 class ThreadJob(threading.Thread):
-    def __init__(self, callback, event, interval):
-        """Runs the callback function after interval seconds.
+  def __init__(self, callback, event, interval):
+    """Runs the callback function after interval seconds.
 
-        :param callback: Callback function to invoke
-        :param event: External event for controlling the update operation
-        :param interval: Time in seconds after which to fire the callback
-        """
-        self.callback = callback
-        self.event = event
-        self.interval = interval
-        super(ThreadJob, self).__init__()
+    :param callback: Callback function to invoke
+    :param event: External event for controlling the update operation
+    :param interval: Time in seconds after which to fire the callback
+    """
+    self.callback = callback
+    self.event = event
+    self.interval = interval
+    super(ThreadJob, self).__init__()
 
-    def run(self):
-        while not self.event.wait(self.interval):
-            self.callback()
+  def run(self):
+    while not self.event.wait(self.interval):
+      self.callback()
