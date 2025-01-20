@@ -1,4 +1,6 @@
-import logging, subprocess, os
+import logging
+import subprocess
+import os
 from .classes import AppConfig, ScriptConfig
 from typing import Literal, Tuple, cast
 from imap_tools import MailBox, MailMessage, MailboxLoginError
@@ -32,7 +34,7 @@ class MailClient:
                 login, pwd
             )
             self.mailbox = mail
-            logging.info(f"mailbox login success")
+            logging.info("mailbox login success")
             return mail
         except MailboxLoginError as e:
             logging.error(f"mailbox login err: {e}")

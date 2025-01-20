@@ -1,4 +1,8 @@
-import argparse, sys, os, logging, msgspec
+import argparse
+import sys
+import os
+import logging
+import msgspec
 from dotenv import load_dotenv
 from .classes import EnvConfig, AppConfig
 
