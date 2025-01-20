@@ -1,10 +1,7 @@
 *venv
 *.env
 __pycache__
-
-# config
+*.egg-info
 config.toml
-
-# experiments
 *test*.py
 **/scripts/

@@ -1,6 +1,6 @@
 import logging, subprocess, os
 from .classes import AppConfig, ScriptConfig
-from typing import Literal, Tuple
+from typing import Literal, Tuple, cast
 from imap_tools import MailBox, MailMessage, MailboxLoginError
 from itertools import filterfalse
 
@@ -56,16 +56,14 @@ class MailClient:
         self.last_uid = self.matches[-1][0].uid
 
     def invoke(self, idx: int):
-        msg: MailMessage
-        script: ScriptConfig
-        msg, script = self.matches[idx]
+        msg, script = cast(tuple[MailMessage, ScriptConfig], self.matches[idx])
         logging.debug(
             f"--> INVOKE: idx={idx} msg={msg.subject}, script={script.exec_path}"
         )
         try:
             assert os.path.isfile(
                 script.exec_path
-            ), f"failed to call script - path does not exist ({script.exec_path})"
+            ), f"failed to call script - path does not exist ({script.exec_path=})"
             py_call = "python" if script.python_ver == 2 else "python3"
             res = subprocess.call([py_call, script.exec_path])
             logging.debug(f"script res: {res}")
