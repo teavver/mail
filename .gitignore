@@ -7,3 +7,4 @@ config.toml
 **/scripts/
 .ruff_cache
 *todo*
+*storage*.json

@@ -16,10 +16,10 @@ def main():
     logging.error("mailbox login failed")
     sys.exit(1)
 
-  mclient.fetch_inbox("recent")
-  logging.info("initial fetch complete")
+  # mclient.fetch_inbox("recent")
+  # logging.info("initial fetch complete")
 
-  mclient.run_auto()
+  # mclient.run_auto()
   logging.info("done")
 
 

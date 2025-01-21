@@ -10,8 +10,8 @@ from itertools import filterfalse
 class MailClient:
   def __init__(self, config: AppConfig):
     self.config = config
-    self.mailbox = None
-    self.last_uid = None
+    self.mailbox: MailBox | None = None
+    self.last_uid: int | None = None
     self.matches = []
 
   def __eval_pattern(self, mail: MailMessage) -> Tuple[MailMessage, ScriptConfig | None]:
