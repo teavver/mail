@@ -1,8 +1,9 @@
 import logging
 import sys
 import src.util as util
-from src.classes import EnvConfig, AppConfig
+from src.classes import EnvConfig, AppConfig, ScriptExecutionLog
 from src.mclient import MailClient
+from src.storage import Storage
 
 
 def main():
@@ -20,6 +21,10 @@ def main():
   # logging.info("initial fetch complete")
 
   # mclient.run_auto()
+
+  log = ScriptExecutionLog(config.scripts[0].exec_path, 0, "Storage TEST")
+  store = Storage()
+  store.add_log("Test", log)
   logging.info("done")
 
 

@@ -1,6 +1,7 @@
 import logging
 import subprocess
 import os
+from subprocess import CalledProcessError
 from .classes import AppConfig, ScriptConfig
 from typing import Literal, Tuple, cast
 from imap_tools import MailBox, MailMessage, MailboxLoginError
@@ -53,10 +54,13 @@ class MailClient:
       assert os.path.isfile(script.exec_path), f"failed to call script - path does not exist ({script.exec_path=})"
       py_call = "python" if script.python_ver == 2 else "python3"
       res = subprocess.call([py_call, script.exec_path])
+      print("RAW ", res)
       logging.debug(f"script res: {res}")
       print()
+    except CalledProcessError as e:
+      logging.error(f"CalledProcessError during invoke: {e}")
     except Exception as e:
-      logging.error(f"err during test invoke script: {e}")
+      logging.error(f"Exception during invoke script: {e}")
 
   def run_auto(self):
     for idx, _ in enumerate(self.matches):

@@ -65,6 +65,15 @@ class ScriptConfig(Struct):
     return self.__pattern
 
 
+class ScriptExecutionLog(Struct):
+  exec_path: str
+  # return value of subprocess.call()
+  # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode
+  code: int | None
+  # additional message regarding the execution process of the script
+  msg: str | None
+
+
 class GeneralAppSettings(Struct):
   fetch_full: int = Defaults.FETCH_FULL
   fetch_recent: int = Defaults.FETCH_RECENT
