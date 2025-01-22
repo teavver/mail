@@ -73,7 +73,7 @@ class ScriptExecutionLog(Struct):
   # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode
   code: int | None
   # additional message regarding the execution process of the script
-  msg: str | None
+  msg: str | None = None
 
 
 class GeneralAppSettings(Struct):

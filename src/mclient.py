@@ -1,16 +1,19 @@
 import logging
 import subprocess
 import os
+from datetime import datetime
 from subprocess import CalledProcessError
-from .classes import AppConfig, ScriptConfig
+from .classes import AppConfig, ScriptConfig, ScriptExecutionLog
 from typing import Literal, Tuple, cast
 from imap_tools import MailBox, MailMessage, MailboxLoginError
 from itertools import filterfalse
+from src.storage import Storage
 
 
 class MailClient:
-  def __init__(self, config: AppConfig):
+  def __init__(self, config: AppConfig, storage: Storage):
     self.config = config
+    self.db = storage
     self.mailbox: MailBox | None = None
     self.last_uid: int | None = None
     self.matches = []
@@ -52,11 +55,16 @@ class MailClient:
     logging.debug(f"--> INVOKE: idx={idx} msg={msg.subject}, script={script.exec_path}")
     try:
       assert os.path.isfile(script.exec_path), f"failed to call script - path does not exist ({script.exec_path=})"
+      # check if we ever ran this script before
+      if script.exec_once and self.db.get_log(script.name, script.exec_path):
+        logging.debug("script is 'exec_once' and was already executed, aborting")
+        return
       py_call = "python" if script.python_ver == 2 else "python3"
       res = subprocess.call([py_call, script.exec_path])
-      print("RAW ", res)
-      logging.debug(f"script res: {res}")
-      print()
+      exec_time = datetime.now()
+      log = ScriptExecutionLog(script.exec_path, exec_time, res)
+      self.db.add_log(msg.subject, script.name, log)
+      logging.debug(f"script res: {res}, invoke end time: {exec_time}\n")
     except CalledProcessError as e:
       logging.error(f"CalledProcessError during invoke: {e}")
     except Exception as e:

@@ -16,9 +16,9 @@ class Storage:
 
   def add_log(self, subject: str, script_name: str, log: ScriptExecutionLog):
     try:
+      # TODO: check for existing matching s.name & subject and replace
       time = datetime.now()
       print(type(time))
-      # encode to catch any type/schema errors
       data = Log(time, script_name, subject, log)
       bjson = msgspec.json.encode(data)
       self.db.insert(msgspec.json.decode(bjson))
@@ -26,10 +26,12 @@ class Storage:
     except Exception as e:
       logging.error(f"err during store_log: {e}")
 
-  def get_log(self, exec_query: str | datetime):
+  def get_log(self, exec_query: str | datetime, exec_path: str):
     """search logs based on script Name or script execution Timestamp"""
     query_key = "ts" if isinstance(exec_query, datetime) else "script_name"
-    logging.debug(f"get_log: {query_key=} , {exec_query=}")
-    matches = self.db.search(Query()[query_key] == exec_query)
+    logging.debug(f"get_log: {query_key=} , {exec_query=} , {exec_path=}")
+    q1 = Query()[query_key] == exec_query
+    q2 = Query()["log"]["exec_path"] == exec_path
+    matches = self.db.search(q1 & q2)
     logging.debug(f"get_log matches: {matches}")
     return matches
