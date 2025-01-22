@@ -3,9 +3,11 @@ import sys
 import json
 import msgspec
 import logging
+from datetime import datetime
 from msgspec import Struct, Meta
 from dataclasses import dataclass
 from typing import Literal, Optional, Annotated
+
 
 type RegexpTarget = Literal["title", "body"]
 
@@ -31,7 +33,7 @@ class MailHostConfig(Struct):
 
 
 class ScriptConfig(Struct):
-  # mandatory
+  # required
   name: Annotated[str, Meta(min_length=1)]
   exec_once: bool
   exec_path: Annotated[str, Meta(min_length=2)]
@@ -44,7 +46,6 @@ class ScriptConfig(Struct):
   def __serialize(self):
     """TODO: override how msgspec serializes class instead of this garbage?"""
     data = msgspec.structs.asdict(self)
-    print(data)
     data.pop("_ScriptConfig__pattern", None)
     data["__pattern"] = self.__pattern.pattern if self.__pattern else None
     return data
@@ -57,12 +58,21 @@ class ScriptConfig(Struct):
       sys.exit(1)
 
   def __post_init__(self):
-    print(self)
     self.__pattern = self.__validate_regexp()
     logging.debug(f"Script '{self.name}':\n{json.dumps(self.__serialize(), indent=2)}")
 
   def get_pattern(self):
     return self.__pattern
+
+
+class ScriptExecutionLog(Struct):
+  exec_path: str
+  exec_ts: datetime
+  # return value of subprocess.call()
+  # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode
+  code: int | None
+  # additional message regarding the execution process of the script
+  msg: str | None = None
 
 
 class GeneralAppSettings(Struct):
@@ -76,11 +86,16 @@ class AppConfig(Struct):
   scripts: list[ScriptConfig]
 
 
-# data
-
-
 @dataclass
 class MailClient:
   email: str
   pwd: str
   host: MailHostConfig
+
+
+@dataclass
+class Log:
+  ts: str
+  script_name: str
+  subject: str
+  log: ScriptExecutionLog
