@@ -1,5 +1,6 @@
 import logging
 import sys
+import datetime
 import src.util as util
 from src.classes import EnvConfig, AppConfig, ScriptExecutionLog
 from src.mclient import MailClient
@@ -22,9 +23,14 @@ def main():
 
   # mclient.run_auto()
 
-  log = ScriptExecutionLog(config.scripts[0].exec_path, 0, "Storage TEST")
+  ts = datetime.datetime.now()
+  script = config.scripts[0]
+  log = ScriptExecutionLog(script.exec_path, ts, 0, "Storage TEST")
   store = Storage()
-  store.add_log("Test", log)
+
+  store.add_log("Test", script.name, log)
+
+  store.get_log(script.name)
   logging.info("done")
 
 

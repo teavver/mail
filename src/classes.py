@@ -3,6 +3,7 @@ import sys
 import json
 import msgspec
 import logging
+from datetime import datetime
 from msgspec import Struct, Meta
 from dataclasses import dataclass
 from typing import Literal, Optional, Annotated
@@ -67,6 +68,7 @@ class ScriptConfig(Struct):
 
 class ScriptExecutionLog(Struct):
   exec_path: str
+  exec_ts: datetime
   # return value of subprocess.call()
   # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode
   code: int | None
@@ -93,3 +95,11 @@ class MailClient:
   email: str
   pwd: str
   host: MailHostConfig
+
+
+@dataclass
+class Log:
+  ts: str
+  script_name: str
+  subject: str
+  log: ScriptExecutionLog
