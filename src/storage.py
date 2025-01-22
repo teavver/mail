@@ -17,9 +17,8 @@ class Storage:
   def add_log(self, subject: str, script_name: str, log: ScriptExecutionLog):
     try:
       # TODO: check for existing matching s.name & subject and replace
-      time = datetime.now()
-      print(type(time))
-      data = Log(time, script_name, subject, log)
+      ts = datetime.now()
+      data = Log(ts, script_name, subject, log)
       bjson = msgspec.json.encode(data)
       self.db.insert(msgspec.json.decode(bjson))
       logging.debug(f"added log, {data=}")

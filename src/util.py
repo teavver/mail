@@ -25,8 +25,7 @@ def get_env() -> EnvConfig:
     load_dotenv()
     required_env_keys = EnvConfig.__annotations__.keys()
     env = {key: os.getenv(key) for key in required_env_keys}
-    env = EnvConfig(**env)
-    return env
+    return EnvConfig(**env)
   except Exception as e:
     logging.error(f"fail during get_env: {e}")
     sys.exit(1)

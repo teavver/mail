@@ -8,6 +8,7 @@ from msgspec import Struct, Meta
 from dataclasses import dataclass
 from typing import Literal, Optional, Annotated
 
+
 type RegexpTarget = Literal["title", "body"]
 
 
@@ -32,7 +33,7 @@ class MailHostConfig(Struct):
 
 
 class ScriptConfig(Struct):
-  # mandatory
+  # required
   name: Annotated[str, Meta(min_length=1)]
   exec_once: bool
   exec_path: Annotated[str, Meta(min_length=2)]
@@ -45,7 +46,6 @@ class ScriptConfig(Struct):
   def __serialize(self):
     """TODO: override how msgspec serializes class instead of this garbage?"""
     data = msgspec.structs.asdict(self)
-    print(data)
     data.pop("_ScriptConfig__pattern", None)
     data["__pattern"] = self.__pattern.pattern if self.__pattern else None
     return data
@@ -58,7 +58,6 @@ class ScriptConfig(Struct):
       sys.exit(1)
 
   def __post_init__(self):
-    print(self)
     self.__pattern = self.__validate_regexp()
     logging.debug(f"Script '{self.name}':\n{json.dumps(self.__serialize(), indent=2)}")
 
@@ -85,9 +84,6 @@ class AppConfig(Struct):
   general: GeneralAppSettings
   mail: MailHostConfig
   scripts: list[ScriptConfig]
-
-
-# data
 
 
 @dataclass

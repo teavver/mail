@@ -13,6 +13,7 @@ def main():
   storage = Storage()
   mclient = MailClient(config, storage)
   mailbox = mclient.login(env.MAIL_ADDR, env.MAIL_PWD)
+  assert mailbox is not None
 
   if mailbox is None:
     logging.error("mailbox login failed")
