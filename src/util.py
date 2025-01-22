@@ -4,19 +4,22 @@ import os
 import logging
 import msgspec
 from dotenv import load_dotenv
+from pathlib import Path
 from .classes import EnvConfig, AppConfig
 
 
 def get_args():
   parser = argparse.ArgumentParser()
   parser.add_argument("-d", "--debug", action="store_true")
+  parser.add_argument("--logfile", type=str)
   args = parser.parse_args()
   logging.basicConfig(
     level=logging.DEBUG if args.debug else logging.INFO,
-    format="[%(levelname)s]: %(message)s",
+    format="%(levelname)s [%(asctime)s]: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[logging.FileHandler(Path(args.logfile) or "log.txt", mode="a"), logging.StreamHandler()],
   )
-  if args.debug:
-    logging.debug(f"args: {args}")
+  logging.debug(f"args: {args}")
   return args
 
 

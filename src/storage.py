@@ -23,10 +23,8 @@ class Storage:
       bjson = msgspec.json.encode(data)
       json = msgspec.json.decode(bjson)
       if exists:
-        logging.debug("EXISTS, TRY REPLACE")
         self.db.update(json, where("script_name") == script_name)
       else:
-        logging.debug("INSERT")
         self.db.insert(json)
       logging.debug(f"added log, {data=}")
     except Exception as e:

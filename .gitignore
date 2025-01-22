@@ -8,3 +8,4 @@ config.toml
 .ruff_cache
 *todo*
 *storage*.json
+*log*.txt
