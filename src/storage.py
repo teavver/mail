@@ -3,7 +3,7 @@ import msgspec
 from datetime import datetime
 from pathlib import Path
 from src.classes import ScriptExecutionLog, Log
-from tinydb import TinyDB, Query
+from tinydb import TinyDB, where
 
 
 class Storage:
@@ -16,11 +16,18 @@ class Storage:
 
   def add_log(self, subject: str, script_name: str, log: ScriptExecutionLog):
     try:
-      # TODO: check for existing matching s.name & subject and replace
+      exists = self.db.contains(where("script_name") == script_name)
       ts = datetime.now()
+      logging.debug(f"add_log call: ts: {ts} , exists: {exists}")
       data = Log(ts, script_name, subject, log)
       bjson = msgspec.json.encode(data)
-      self.db.insert(msgspec.json.decode(bjson))
+      json = msgspec.json.decode(bjson)
+      if exists:
+        logging.debug("EXISTS, TRY REPLACE")
+        self.db.update(json, where("script_name") == script_name)
+      else:
+        logging.debug("INSERT")
+        self.db.insert(json)
       logging.debug(f"added log, {data=}")
     except Exception as e:
       logging.error(f"err during store_log: {e}")
@@ -29,8 +36,8 @@ class Storage:
     """search logs based on script Name or script execution Timestamp"""
     query_key = "ts" if isinstance(exec_query, datetime) else "script_name"
     logging.debug(f"get_log: {query_key=} , {exec_query=} , {exec_path=}")
-    q1 = Query()[query_key] == exec_query
-    q2 = Query()["log"]["exec_path"] == exec_path
+    q1 = where(query_key) == exec_query
+    q2 = where("log")["exec_path"] == exec_path
     matches = self.db.search(q1 & q2)
     logging.debug(f"get_log matches: {matches}")
     return matches

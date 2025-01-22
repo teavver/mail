@@ -35,7 +35,11 @@ def get_config() -> AppConfig:
   try:
     with open("config.toml", "rb") as f:
       config = msgspec.toml.decode(f.read(), type=AppConfig)
-      logging.debug(f"config: {config}")
+      unique_names = len({s.name for s in config.scripts}) == len(config.scripts)
+      if not unique_names:
+        logging.error("script names must be unique")
+        sys.exit(1)
+      logging.debug(f"get_config load OK: {config}")
       return config
   except Exception as e:
     logging.error(f"err during parse_config: {e}")
