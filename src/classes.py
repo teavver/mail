@@ -43,13 +43,6 @@ class ScriptConfig(Struct):
   python_ver: Literal[2, 3] = Defaults.PYTHON_VER
   __pattern: Optional[re.Pattern] = None
 
-  def __serialize(self):
-    """TODO: override how msgspec serializes class instead of this garbage?"""
-    data = msgspec.structs.asdict(self)
-    data.pop("_ScriptConfig__pattern", None)
-    data["__pattern"] = self.__pattern.pattern if self.__pattern else None
-    return data
-
   def __validate_regexp(self) -> re.Pattern:
     try:
       return re.compile(self.regexp)
@@ -59,7 +52,11 @@ class ScriptConfig(Struct):
 
   def __post_init__(self):
     self.__pattern = self.__validate_regexp()
-    logging.debug(f"Script '{self.name}':\n{json.dumps(self.__serialize(), indent=2)}")
+    fixed_self = {
+      **{k: getattr(self, k) for k in ["name", "exec_once", "exec_path", "regexp", "regexp_target", "python_ver"]},
+      "__pattern": self.__pattern.pattern if self.__pattern else None,
+    }
+    logging.debug(f"Script '{self.name}': {json.dumps(msgspec.to_builtins(fixed_self), indent=2)}")
 
   def get_pattern(self):
     return self.__pattern
