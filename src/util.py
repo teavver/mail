@@ -4,7 +4,6 @@ import os
 import logging
 import msgspec
 from dotenv import load_dotenv
-from pathlib import Path
 from .classes import EnvConfig, AppConfig
 
 
@@ -17,7 +16,7 @@ def get_args():
     level=logging.DEBUG if args.debug else logging.INFO,
     format="%(levelname)s [%(asctime)s]: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[logging.FileHandler(Path(args.logfile) or "log.txt", mode="a"), logging.StreamHandler()],
+    handlers=[logging.FileHandler(args.logfile or "log.txt", mode="a"), logging.StreamHandler()],
   )
   logging.debug(f"args: {args}")
   return args

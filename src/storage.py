@@ -19,14 +19,13 @@ class Storage:
       exists = self.db.contains(where("script_name") == script_name)
       ts = datetime.now()
       logging.debug(f"add_log call: ts: {ts} , exists: {exists}")
-      data = Log(ts, script_name, subject, log)
-      bjson = msgspec.json.encode(data)
-      json = msgspec.json.decode(bjson)
+      log = Log(ts, script_name, subject, log)
+      json = msgspec.to_builtins(log)
       if exists:
         self.db.update(json, where("script_name") == script_name)
       else:
         self.db.insert(json)
-      logging.debug(f"added log, {data=}")
+      logging.debug(f"added log, obj: {json}")
     except Exception as e:
       logging.error(f"err during store_log: {e}")
 
