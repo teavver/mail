@@ -6,3 +6,6 @@ config.toml
 *test*.py
 **/scripts/
 .ruff_cache
+*todo*
+*storage*.json
+*log*.txt

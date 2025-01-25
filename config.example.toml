@@ -17,5 +17,6 @@ name = "steam"
 exec_once = false
 exec_path = "..."
 regexp = "Steam"
-regexp_target = "title" # Optional, default = "title"
-python_ver = 2 # Optional, default = 3
+regexp_target = "title"                  # title | body
+regexp_from = "noreply@steampowered.com" # default = ".*" (match all)
+python_ver = 2                           # 2 | 3, default = 3
