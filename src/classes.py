@@ -13,6 +13,7 @@ type RegexpTarget = Literal["title", "body"]
 
 
 class Defaults:
+  LOGFILE = "log.txt"
   PYTHON_VER = 3
   REGEXP_FROM = ".*"
   REGEXP_TARGET = "title"
@@ -75,9 +76,9 @@ class ScriptExecutionLog(Struct):
   exec_ts: datetime
   # return value of subprocess.call()
   # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode
-  code: int | None
+  code: int
   # additional info, e.g. call error
-  msg: str | None = None
+  msg: Optional[str]
 
 
 class GeneralAppSettings(Struct):
@@ -89,6 +90,11 @@ class AppConfig(Struct):
   general: GeneralAppSettings
   mail: MailHostConfig
   scripts: list[ScriptConfig]
+
+
+class AppArgs(Struct):
+  debug: Optional[bool] = False
+  logfile: Optional[str] = Defaults.LOGFILE
 
 
 @dataclass
