@@ -11,18 +11,18 @@ def main():
   util.get_args()
   config: AppConfig = util.get_config()
   storage = Storage()
-  mclient = MailClient(config, storage)
-  mailbox = mclient.login(env.MAIL_ADDR, env.MAIL_PWD)
-  assert mailbox is not None
+  mail = MailClient(config, storage)
+  mail.login(env.MAIL_ADDR, env.MAIL_PWD)
+  assert mail is not None
 
-  if mailbox is None:
-    logging.error("mailbox login failed")
+  if mail is None:
+    logging.error("mail login failed")
     sys.exit(1)
 
-  mclient.fetch_inbox("recent")
+  mail.fetch_inbox("recent")
   logging.info("initial fetch complete")
 
-  mclient.run_auto()
+  mail.run_auto()
   logging.info("done")
 
 

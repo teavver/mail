@@ -20,9 +20,6 @@ class Defaults:
   FETCH_RECENT = 50
 
 
-# config related
-
-
 class EnvConfig(Struct):
   MAIL_ADDR: str
   MAIL_PWD: str
@@ -64,7 +61,10 @@ class ScriptConfig(Struct):
     }
     logging.debug(f"Script '{self.name}': {json.dumps(msgspec.to_builtins(str_self), indent=2)}")
 
-  def get_pattern(self):
+  def get_from_pattern(self):
+    return self.__from_pattern
+
+  def get_main_pattern(self):
     return self.__main_pattern
 
 
