@@ -4,10 +4,10 @@ import os
 import logging
 import msgspec
 from dotenv import load_dotenv
-from .classes import EnvConfig, AppConfig
+from .classes import EnvConfig, AppConfig, AppArgs, Defaults
 
 
-def get_args():
+def get_args() -> AppArgs:
   parser = argparse.ArgumentParser()
   parser.add_argument("-d", "--debug", action="store_true")
   parser.add_argument("--logfile", type=str)
@@ -16,10 +16,11 @@ def get_args():
     level=logging.DEBUG if args.debug else logging.INFO,
     format="%(levelname)s [%(asctime)s]: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[logging.FileHandler(args.logfile or "log.txt", mode="a"), logging.StreamHandler()],
+    handlers=[logging.FileHandler(args.logfile or Defaults.LOGFILE, mode="a"), logging.StreamHandler()],
   )
   logging.debug(f"args: {args}")
-  return args
+  app_args = msgspec.convert(args.__dict__, AppArgs)
+  return app_args
 
 
 def get_env() -> EnvConfig:
