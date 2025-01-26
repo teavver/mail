@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
   name="mail",
-  version="0.0.2+dev",
+  version="0.0.3+dev",
   author="teavver",
   install_requires=["imap-tools", "msgspec", "python-dotenv", "tinydb"],
   python_requires=">=3.12",
