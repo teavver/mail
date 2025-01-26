@@ -14,7 +14,7 @@ class ThreadJob(threading.Thread):
     self.interval = interval
     self.pause_event = threading.Event()
     self.pause_event.set()
-    super(ThreadJob, self).__init__()
+    super().__init__()
 
   def run(self):
     while not self.event.wait(self.interval):

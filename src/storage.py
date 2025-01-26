@@ -1,16 +1,16 @@
 import logging
-import msgspec
 from datetime import datetime
 from pathlib import Path
-from src.classes import ScriptExecutionLog, Log
+import msgspec
 from tinydb import TinyDB, where
+from src.classes import Log, ScriptExecutionLog
 
 
 class Storage:
   def __init__(self):
-    dir = Path(".").resolve()
+    curdir = Path(".").resolve()
     self.filename = "storage.json"
-    store_path = Path.joinpath(dir, self.filename)
+    store_path = Path.joinpath(curdir, self.filename)
     self.db = TinyDB(store_path)
     logging.debug(f"storage init {store_path=}")
 

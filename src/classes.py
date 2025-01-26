@@ -1,13 +1,12 @@
+import json
+import logging
 import re
 import sys
-import json
-import msgspec
-import logging
-from datetime import datetime
-from msgspec import Struct, Meta
 from dataclasses import dataclass
-from typing import Literal, Optional, Annotated
-
+from datetime import datetime
+from typing import Annotated, Literal
+import msgspec
+from msgspec import Meta, Struct
 
 type RegexpTarget = Literal["title", "body"]
 
@@ -45,8 +44,8 @@ class ScriptConfig(Struct):
   regexp_target: RegexpTarget = Defaults.REGEXP_TARGET
   python_ver: Literal[2, 3] = Defaults.PYTHON_VER
   # internal
-  __from_pattern: Optional[re.Pattern] = None  # compiled pattern from 'regexp_from'
-  __main_pattern: Optional[re.Pattern] = None  # compiled pattern from 'regexp'
+  __from_pattern: re.Pattern | None = None  # compiled pattern from 'regexp_from'
+  __main_pattern: re.Pattern | None = None  # compiled pattern from 'regexp'
 
   def __validate_regexp(self, regexp_val: str) -> re.Pattern:
     try:
@@ -81,7 +80,7 @@ class ScriptExecutionLog(Struct):
   # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode
   code: int
   # additional info, e.g. call error
-  msg: Optional[str]
+  msg: str | None
 
 
 class GeneralAppSettings(Struct):
@@ -100,8 +99,8 @@ class AppConfig(Struct):
 
 
 class AppArgs(Struct):
-  debug: Optional[bool] = False
-  logfile: Optional[str] = Defaults.LOGFILE
+  debug: bool | None = False
+  logfile: str | None = Defaults.LOGFILE
 
 
 @dataclass

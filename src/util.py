@@ -1,10 +1,10 @@
 import argparse
-import sys
-import os
 import logging
+import os
+import sys
 import msgspec
 from dotenv import load_dotenv
-from .classes import EnvConfig, AppConfig, AppArgs, Defaults
+from .classes import AppArgs, AppConfig, Defaults, EnvConfig
 
 
 def get_args() -> AppArgs:

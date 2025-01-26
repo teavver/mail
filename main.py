@@ -1,8 +1,8 @@
 import logging
-import sys
 import signal
+import sys
 import src.util as util
-from src.classes import EnvConfig, AppConfig
+from src.classes import AppConfig, EnvConfig
 from src.mclient import MailClient
 from src.storage import Storage
 

@@ -1,15 +1,15 @@
 import logging
-import subprocess
 import os
+import subprocess
 import threading
 from datetime import datetime
-from subprocess import CalledProcessError
-from .classes import AppConfig, ScriptConfig, ScriptExecutionLog, Defaults
-from typing import List, Tuple, cast
-from imap_tools import MailBox, MailMessage, MailboxLoginError
 from itertools import filterfalse
+from subprocess import CalledProcessError
+from typing import cast
+from imap_tools import MailBox, MailboxLoginError, MailMessage
 from src.interval import ThreadJob
 from src.storage import Storage
+from .classes import AppConfig, Defaults, ScriptConfig, ScriptExecutionLog
 
 
 class MailClient:
@@ -18,7 +18,7 @@ class MailClient:
     self.db = storage
     self.mailbox: MailBox | None = None
     # history mode
-    self.matches: List[Tuple[MailMessage, ScriptConfig | None]] = []
+    self.matches: list[tuple[MailMessage, ScriptConfig | None]] = []
     # polling mode
     self.is_polling: bool = False
     self.poll_event: threading.Event | None = None
@@ -37,7 +37,7 @@ class MailClient:
     except Exception as e:
       logging.error(f"exception during poll: {e}")
 
-  def __eval_pattern(self, mail: MailMessage) -> Tuple[MailMessage, ScriptConfig | None]:
+  def __eval_pattern(self, mail: MailMessage) -> tuple[MailMessage, ScriptConfig | None]:
     try:
       for script in self.config.scripts:
         from_pattern = script.get_from_pattern()
