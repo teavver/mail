@@ -12,8 +12,17 @@ class ThreadJob(threading.Thread):
     self.callback = callback
     self.event = event
     self.interval = interval
-    super(ThreadJob, self).__init__()
+    self.pause_event = threading.Event()
+    self.pause_event.set()
+    super().__init__()
 
   def run(self):
     while not self.event.wait(self.interval):
-      self.callback()
+      if self.pause_event.is_set():
+        self.callback()
+
+  def pause(self):
+    self.pause_event.clear()
+
+  def resume(self):
+    self.pause_event.set()

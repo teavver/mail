@@ -1,24 +1,33 @@
+import json
+import logging
 import re
 import sys
-import json
-import msgspec
-import logging
-from datetime import datetime
-from msgspec import Struct, Meta
 from dataclasses import dataclass
-from typing import Literal, Optional, Annotated
+from datetime import datetime
+from typing import Annotated, Literal
+import msgspec
+from msgspec import Meta, Struct
 
 
 type RegexpTarget = Literal["title", "body"]
 
 
+type ScriptMode = Literal["polling", "history"]
+
+
+type AppRunMode = Literal["all"] | ScriptMode
+
+
 class Defaults:
+  # config-related
+  APP_RUN_MODE = "all"
   LOGFILE = "log.txt"
-  PYTHON_VER = 3
   REGEXP_FROM = ".*"
-  REGEXP_TARGET = "title"
-  FETCH_FULL = 500
-  FETCH_RECENT = 50
+  REGEXP_MAIN_TARGET = "title"
+  FETCH_LIMIT = 50
+  POLL_INTERVAL_SECONDS = 5
+  # internal
+  MAIL_LOGIN_TIMEOUT = 60
 
 
 class EnvConfig(Struct):
@@ -33,17 +42,17 @@ class MailHostConfig(Struct):
 
 class ScriptConfig(Struct):
   # required
+  mode: ScriptMode
   name: Annotated[str, Meta(min_length=1)]
   exec_once: bool
   exec_path: Annotated[str, Meta(min_length=2)]
-  regexp: Annotated[str, Meta(min_length=1)]
+  regexp_main: Annotated[str, Meta(min_length=1)]
   # defaults
   regexp_from: Annotated[str, Meta(min_length=1)] = Defaults.REGEXP_FROM
-  regexp_target: RegexpTarget = Defaults.REGEXP_TARGET
-  python_ver: Literal[2, 3] = Defaults.PYTHON_VER
+  regexp_main_target: RegexpTarget = Defaults.REGEXP_MAIN_TARGET
   # internal
-  __from_pattern: Optional[re.Pattern] = None  # compiled pattern from 'regexp_from'
-  __main_pattern: Optional[re.Pattern] = None  # compiled pattern from 'regexp'
+  __from_pattern: re.Pattern | None = None  # compiled pattern from 'regexp_from'
+  __main_pattern: re.Pattern | None = None  # compiled pattern from 'regexp'
 
   def __validate_regexp(self, regexp_val: str) -> re.Pattern:
     try:
@@ -53,10 +62,13 @@ class ScriptConfig(Struct):
       sys.exit(1)
 
   def __post_init__(self):
-    self.__main_pattern = self.__validate_regexp(self.regexp)
+    self.__main_pattern = self.__validate_regexp(self.regexp_main)
     self.__from_pattern = self.__validate_regexp(self.regexp_from)
     str_self = {
-      **{k: getattr(self, k) for k in ["name", "exec_once", "exec_path", "regexp", "regexp_target", "python_ver"]},
+      **{
+        k: getattr(self, k)
+        for k in ["name", "exec_once", "exec_path", "regexp_main", "regexp_from", "regexp_main_target"]
+      },
       "__main_pattern": self.__main_pattern.pattern if self.__main_pattern else None,
       "__from_pattern": self.__from_pattern.pattern if self.__from_pattern else None,
     }
@@ -72,18 +84,23 @@ class ScriptConfig(Struct):
 class ScriptExecutionLog(Struct):
   # absolute path of the script
   exec_path: str
-  # timestamp when the script finished
+  # timestamp when the script finished (or exception was thrown)
   exec_ts: datetime
-  # return value of subprocess.call()
+  # return code of subprocess.run()
+  # -1 indicates that the run() call did not start successfully
   # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode
   code: int
   # additional info, e.g. call error
-  msg: Optional[str]
+  msg: str | None = None
 
 
 class GeneralAppSettings(Struct):
-  fetch_full: int = Defaults.FETCH_FULL
-  fetch_recent: int = Defaults.FETCH_RECENT
+  run_mode: AppRunMode
+  fetch_limit: int = Defaults.FETCH_LIMIT
+  polling_interval: int = Defaults.POLL_INTERVAL_SECONDS
+
+  def __post_init__(self):
+    logging.debug(f"general settings: {json.dumps(msgspec.to_builtins(self), indent=2)}")
 
 
 class AppConfig(Struct):
@@ -93,8 +110,8 @@ class AppConfig(Struct):
 
 
 class AppArgs(Struct):
-  debug: Optional[bool] = False
-  logfile: Optional[str] = Defaults.LOGFILE
+  debug: bool | None = False
+  logfile: str | None = Defaults.LOGFILE
 
 
 @dataclass

@@ -1,16 +1,20 @@
 import argparse
-import sys
-import os
 import logging
+import os
+import sys
 import msgspec
 from dotenv import load_dotenv
-from .classes import EnvConfig, AppConfig, AppArgs, Defaults
+from .classes import AppArgs, AppConfig, Defaults, EnvConfig
 
 
 def get_args() -> AppArgs:
   parser = argparse.ArgumentParser()
   parser.add_argument("-d", "--debug", action="store_true")
   parser.add_argument("--logfile", type=str)
+  # TODO: add:
+  # --config FILEPATH
+  # --quiet NO LOGS AT ALL
+  # --force-mode (override)
   args = parser.parse_args()
   logging.basicConfig(
     level=logging.DEBUG if args.debug else logging.INFO,
@@ -47,3 +51,8 @@ def get_config() -> AppConfig:
   except Exception as e:
     logging.error(f"err during parse_config: {e}")
     sys.exit(1)
+
+
+def handle_quit(sig, frame):
+  logging.info("quitting")
+  sys.exit(0)
