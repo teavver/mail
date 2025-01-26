@@ -27,7 +27,7 @@ def main():
     mail.run_auto()
 
   mode = config.general.run_mode
-  logging.debug(f"starting in {mode=} ...")
+  logging.info(f"starting in {mode=} ...")
   # TODO: handle --force-mode flag here
   run = {"history": run_history, "polling": run_polling}
   if mode == "all":

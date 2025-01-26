@@ -19,12 +19,15 @@ type AppRunMode = Literal["all"] | ScriptMode
 
 
 class Defaults:
+  # config-related
   APP_RUN_MODE = "all"
   LOGFILE = "log.txt"
   REGEXP_FROM = ".*"
   REGEXP_MAIN_TARGET = "title"
   FETCH_LIMIT = 50
   POLL_INTERVAL_SECONDS = 5
+  # internal
+  MAIL_LOGIN_TIMEOUT = 60
 
 
 class EnvConfig(Struct):
