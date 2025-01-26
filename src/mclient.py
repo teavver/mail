@@ -1,15 +1,13 @@
 import logging
-import os
 import subprocess
 import threading
 from datetime import datetime
 from itertools import filterfalse
 from subprocess import CalledProcessError
-from typing import cast
-from imap_tools import MailBox, MailboxLoginError, MailMessage
+from imap_tools import A, MailBox, MailboxLoginError, MailMessage
 from src.interval import ThreadJob
 from src.storage import Storage
-from .classes import AppConfig, Defaults, ScriptConfig, ScriptExecutionLog
+from .classes import AppConfig, Defaults, ScriptConfig, ScriptExecutionLog, ScriptMode
 
 
 class MailClient:
@@ -25,7 +23,7 @@ class MailClient:
     self.poll_thread: ThreadJob | None = None
     self.last_uid: int = -1
     # init polling thread
-    if config.general.mode == "polling":
+    if any(script.mode == "polling" for script in self.config.scripts):
       self.poll_event = threading.Event()
       self.poll_thread = ThreadJob(lambda: self.__poll(), self.poll_event, self.config.general.polling_interval)
       logging.debug("init polling Thread ok")
@@ -33,29 +31,37 @@ class MailClient:
   def __poll(self):
     """(mode: polling) continuously check for new emails & eval against patterns"""
     try:
-      logging.debug("POLLING NEW STUFF")
+      res = self.mailbox.idle.poll(timeout=self.config.general.polling_interval)
+      if res:
+        for msg in self.mailbox.idle.wait(A(seen=False)):
+          logging.info(f"polling: new msg: {msg.subject}")
+          msg, script = self.__eval_pattern(msg, "polling")
+          self.invoke_script(msg, script)
     except Exception as e:
       logging.error(f"exception during poll: {e}")
 
-  def __eval_pattern(self, mail: MailMessage) -> tuple[MailMessage, ScriptConfig | None]:
+  def __eval_pattern(self, msg: MailMessage, mode: ScriptMode | None = None) -> tuple[MailMessage, ScriptConfig | None]:
     try:
       for script in self.config.scripts:
+        if mode is not None and script.mode != mode:
+          return (msg, None)
         from_pattern = script.get_from_pattern()
-        if from_pattern != Defaults.REGEXP_FROM and not from_pattern.match(mail.from_):
-          logging.debug(f"MAIL SENDER NOT MATCH, expected: {from_pattern}, got: {mail.from_}")
-          return (mail, None)
-        src = mail.text if script.regexp_target == "body" else mail.subject
+        if from_pattern != Defaults.REGEXP_FROM and not from_pattern.match(msg.from_):
+          logging.debug(f"MAIL SENDER NOT MATCH, expected: {from_pattern}, got: {msg.from_}")
+          return (msg, None)
+        src = msg.text if script.regexp_main_target == "body" else msg.subject
         res = script.get_main_pattern().match(src)
         if res:
-          logging.debug(f"eval match: subject: {mail.subject}, target: {script.regexp_target}, res: {res}")
-          return (mail, script)
-      return (mail, None)
+          logging.debug(f"eval match: subject: {msg.subject}, target: {script.regexp_main_target}, res: {res}")
+          return (msg, script)
+      logging.debug(f"MAIN_REGEX NOT MATCH, expected: {src}")
+      return (msg, None)
     except Exception as e:
       logging.error(f"fail during eval_mail: {e}")
 
   def login(self, login, pwd) -> MailBox:
     try:
-      mail = MailBox(self.config.mail.host, self.config.mail.port, 60).login(login, pwd)
+      mail = MailBox(self.config.mail.host, self.config.mail.port, Defaults.MAIL_LOGIN_TIMEOUT).login(login, pwd)
       self.mailbox = mail
       logging.info("mailbox login success")
       return mail
@@ -64,7 +70,7 @@ class MailClient:
     except Exception as e:
       logging.error(f"mailbox login unknown err: {e}")
 
-  def pause_polling(self):
+  def stop_polling(self):
     if not self.is_polling:
       return logging.debug("pause_polling called when already off")
     logging.debug("pause_polling")
@@ -81,36 +87,36 @@ class MailClient:
 
   def fetch_inbox(self):
     """(mode: history) fetch last FETCH_LIMIT messages from mailbox & eval against patterns"""
-    msgs_gen = (msg for msg in self.mailbox.fetch(self.config.general.fetch_limit, reverse=True, charset="UTF-8"))
-    eval_msgs = tuple([self.__eval_pattern(msg) for msg in msgs_gen])
+    logging.debug(f"fetching inbox ({self.config.general.fetch_limit})")
+    msgs_gen = (msg for msg in self.mailbox.fetch(limit=self.config.general.fetch_limit, reverse=True, charset="UTF-8"))
+    eval_msgs = tuple([self.__eval_pattern(msg, "history") for msg in msgs_gen])
     self.matches = list(filterfalse(lambda x: x is None or x[1] is None, eval_msgs))
     logging.debug(f"fetch_inbox matches count: {len(self.matches)}")
 
-  def invoke_script(self, idx: int):
-    assert self.matches[idx] is not None, "failed to invoke_script: no match with such idx"
-    msg, script = cast(tuple[MailMessage, ScriptConfig], self.matches[idx])
+  def invoke_script(self, msg: MailMessage, script: ScriptConfig | None):
+    if script is None:
+      return
     logging.debug("--- INVOKE START ---")
-    logging.debug(f"{idx=}, {msg.subject=}, {script.exec_path=}")
+    logging.debug(f"{msg.subject=}, {script.exec_path=}")
     try:
       err_msg = None
-      if not os.path.isfile(script.exec_path):
-        err_msg = f"failed to call script - path does not exist ({script.exec_path=})"
-        return logging.error(err_msg)
       if script.exec_once and self.db.get_log(script.name, script.exec_path):
         return logging.debug("script is 'exec_once' and was already executed, aborting")
-      # TODO: add more flexible call - custom full exec path?
-      py_call = "python" if script.python_ver == 2 else "python3"
-      res = subprocess.call([py_call, script.exec_path])
+      res = subprocess.run(script.exec_path.split(" "), check=True)
       exec_time = datetime.now()
-      log = ScriptExecutionLog(script.exec_path, exec_time, res)
-      self.db.add_log(msg.subject, script.name, log, err_msg)
+      log = ScriptExecutionLog(script.exec_path, exec_time, res.returncode)
+      self.db.add_log(msg.subject, script.name, log)
       logging.debug(f"script res: {res}, invoke end time: {exec_time}")
+      logging.debug("--- INVOKE END ---")
+      return
     except CalledProcessError as e:
-      logging.error(f"CalledProcessError during invoke: {e}")
+      err_msg = f"CalledProcessError during invoke: {e}"
     except Exception as e:
-      logging.error(f"Exception during invoke script: {e}")
-    logging.debug("--- INVOKE END ---")
+      err_msg = f"Exception during invoke: {e}"
+    logging.error(err_msg)
+    log = ScriptExecutionLog(script.exec_path, datetime.now(), -1, err_msg)
+    self.db.add_log(msg.subject, script.name, log)
+    logging.debug("--- INVOKE END (ERR) ---")
 
   def run_auto(self):
-    for idx, _ in enumerate(self.matches):
-      self.invoke_script(idx)
+    [self.invoke_script(msg, script) for msg, script in self.matches]

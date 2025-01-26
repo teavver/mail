@@ -25,7 +25,7 @@ class Storage:
         self.db.update(json, where("script_name") == script_name)
       else:
         self.db.insert(json)
-      logging.debug(f"added log, obj: {json}")
+      logging.debug(f"{'updated' if exists else 'added'} log, obj: {json}")
     except Exception as e:
       logging.error(f"err during store_log: {e}")
 
