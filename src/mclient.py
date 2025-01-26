@@ -1,5 +1,4 @@
 import logging
-import os
 import subprocess
 import threading
 from datetime import datetime
@@ -44,11 +43,12 @@ class MailClient:
         if from_pattern != Defaults.REGEXP_FROM and not from_pattern.match(mail.from_):
           logging.debug(f"MAIL SENDER NOT MATCH, expected: {from_pattern}, got: {mail.from_}")
           return (mail, None)
-        src = mail.text if script.regexp_target == "body" else mail.subject
+        src = mail.text if script.regexp_main_target == "body" else mail.subject
         res = script.get_main_pattern().match(src)
         if res:
-          logging.debug(f"eval match: subject: {mail.subject}, target: {script.regexp_target}, res: {res}")
+          logging.debug(f"eval match: subject: {mail.subject}, target: {script.regexp_main_target}, res: {res}")
           return (mail, script)
+      logging.debug(f"MAIN_REGEX NOT MATCH, expected: {src}")
       return (mail, None)
     except Exception as e:
       logging.error(f"fail during eval_mail: {e}")
@@ -81,34 +81,34 @@ class MailClient:
 
   def fetch_inbox(self):
     """(mode: history) fetch last FETCH_LIMIT messages from mailbox & eval against patterns"""
-    msgs_gen = (msg for msg in self.mailbox.fetch(self.config.general.fetch_limit, reverse=True, charset="UTF-8"))
+    logging.debug(f"fetching inbox ({self.config.general.fetch_limit})")
+    msgs_gen = (msg for msg in self.mailbox.fetch(limit=self.config.general.fetch_limit, reverse=True, charset="UTF-8"))
     eval_msgs = tuple([self.__eval_pattern(msg) for msg in msgs_gen])
     self.matches = list(filterfalse(lambda x: x is None or x[1] is None, eval_msgs))
     logging.debug(f"fetch_inbox matches count: {len(self.matches)}")
 
   def invoke_script(self, idx: int):
-    assert self.matches[idx] is not None, "failed to invoke_script: no match with such idx"
+    assert self.matches[idx] is not None, "failed to invoke: no match with such idx"
     msg, script = cast(tuple[MailMessage, ScriptConfig], self.matches[idx])
     logging.debug("--- INVOKE START ---")
     logging.debug(f"{idx=}, {msg.subject=}, {script.exec_path=}")
     try:
       err_msg = None
-      if not os.path.isfile(script.exec_path):
-        err_msg = f"failed to call script - path does not exist ({script.exec_path=})"
-        return logging.error(err_msg)
       if script.exec_once and self.db.get_log(script.name, script.exec_path):
         return logging.debug("script is 'exec_once' and was already executed, aborting")
-      # TODO: add more flexible call - custom full exec path?
-      py_call = "python" if script.python_ver == 2 else "python3"
-      res = subprocess.call([py_call, script.exec_path])
+      res = subprocess.run(script.exec_path.split(" "), check=True)
       exec_time = datetime.now()
-      log = ScriptExecutionLog(script.exec_path, exec_time, res)
-      self.db.add_log(msg.subject, script.name, log, err_msg)
+      log = ScriptExecutionLog(script.exec_path, exec_time, res.returncode)
+      self.db.add_log(msg.subject, script.name, log)
       logging.debug(f"script res: {res}, invoke end time: {exec_time}")
+      return
     except CalledProcessError as e:
-      logging.error(f"CalledProcessError during invoke: {e}")
+      err_msg = f"CalledProcessError during invoke: {e}"
     except Exception as e:
-      logging.error(f"Exception during invoke script: {e}")
+      err_msg = f"Exception during invoke: {e}"
+    logging.error(err_msg)
+    log = ScriptExecutionLog(script.exec_path, datetime.now(), -1, err_msg)
+    self.db.add_log(msg.subject, script.name, log)
     logging.debug("--- INVOKE END ---")
 
   def run_auto(self):

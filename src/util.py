@@ -11,6 +11,9 @@ def get_args() -> AppArgs:
   parser = argparse.ArgumentParser()
   parser.add_argument("-d", "--debug", action="store_true")
   parser.add_argument("--logfile", type=str)
+  # TODO: add:
+  # --config FILEPATH
+  # --quiet NO LOGS AT ALL
   args = parser.parse_args()
   logging.basicConfig(
     level=logging.DEBUG if args.debug else logging.INFO,
