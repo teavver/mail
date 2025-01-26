@@ -24,7 +24,7 @@ class MailClient:
     self.poll_thread: ThreadJob | None = None
     self.last_uid: int = -1
     # init polling thread
-    if config.general.run_mode == "polling":
+    if any(script.mode == "polling" for script in self.config.scripts):
       self.poll_event = threading.Event()
       self.poll_thread = ThreadJob(lambda: self.__poll(), self.poll_event, self.config.general.polling_interval)
       logging.debug("init polling Thread ok")
@@ -39,6 +39,8 @@ class MailClient:
   def __eval_pattern(self, mail: MailMessage) -> tuple[MailMessage, ScriptConfig | None]:
     try:
       for script in self.config.scripts:
+        if script.mode != "history":
+          return logging.debug("IGNORE SCRIPT (POLLING in __Eval)")
         from_pattern = script.get_from_pattern()
         if from_pattern != Defaults.REGEXP_FROM and not from_pattern.match(mail.from_):
           logging.debug(f"MAIL SENDER NOT MATCH, expected: {from_pattern}, got: {mail.from_}")

@@ -92,7 +92,7 @@ class ScriptExecutionLog(Struct):
 
 
 class GeneralAppSettings(Struct):
-  run_mode: AppRunMode = Defaults.APP_RUN_MODE
+  run_mode: AppRunMode
   fetch_limit: int = Defaults.FETCH_LIMIT
   polling_interval: int = Defaults.POLL_INTERVAL_SECONDS
 

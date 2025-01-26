@@ -32,7 +32,7 @@ def main():
   run = {"history": run_history, "polling": run_polling}
   if mode == "all":
     print("RUN ALL")
-    # [func() for func in run.values()]
+    [func() for func in run.values()]
   else:
     print(f"RUN {mode}")
     run[mode]()
