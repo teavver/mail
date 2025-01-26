@@ -20,18 +20,18 @@ class MailClient:
     # history mode
     self.matches: List[Tuple[MailMessage, ScriptConfig | None]] = []
     # polling mode
-    # self.is_polling: bool = False
+    self.is_polling: bool = False
     self.poll_event: threading.Event | None = None
     self.poll_thread: ThreadJob | None = None
     self.last_uid: int = -1
+    # init polling thread
     if config.general.mode == "polling":
-      SECONDS = 3  # TODO CONFIG
       self.poll_event = threading.Event()
-      self.poll_thread = ThreadJob(lambda: self.__poll(), self.poll_event, SECONDS)
+      self.poll_thread = ThreadJob(lambda: self.__poll(), self.poll_event, self.config.general.polling_interval)
       logging.debug("init polling Thread ok")
 
   def __poll(self):
-    """(polling) continuously check for new messages & eval against pattenrs"""
+    """(mode: polling) continuously check for new emails & eval against patterns"""
     try:
       logging.debug("POLLING NEW STUFF")
     except Exception as e:
@@ -76,10 +76,11 @@ class MailClient:
       return logging.debug("start_polling called when already polling")
     logging.debug("start_polling")
     self.poll_thread.start()
+    self.__poll()
     self.is_polling = True
 
   def fetch_inbox(self):
-    """(history) fetch last FETCH_LIMIT messages from mailbox & eval against patterns"""
+    """(mode: history) fetch last FETCH_LIMIT messages from mailbox & eval against patterns"""
     msgs_gen = (msg for msg in self.mailbox.fetch(self.config.general.fetch_limit, reverse=True, charset="UTF-8"))
     eval_msgs = tuple([self.__eval_pattern(msg) for msg in msgs_gen])
     self.matches = list(filterfalse(lambda x: x is None or x[1] is None, eval_msgs))
@@ -91,7 +92,10 @@ class MailClient:
     logging.debug("--- INVOKE START ---")
     logging.debug(f"{idx=}, {msg.subject=}, {script.exec_path=}")
     try:
-      assert os.path.isfile(script.exec_path), f"failed to call script - path does not exist ({script.exec_path=})"
+      err_msg = None
+      if not os.path.isfile(script.exec_path):
+        err_msg = f"failed to call script - path does not exist ({script.exec_path=})"
+        return logging.error(err_msg)
       if script.exec_once and self.db.get_log(script.name, script.exec_path):
         return logging.debug("script is 'exec_once' and was already executed, aborting")
       # TODO: add more flexible call - custom full exec path?
@@ -99,7 +103,7 @@ class MailClient:
       res = subprocess.call([py_call, script.exec_path])
       exec_time = datetime.now()
       log = ScriptExecutionLog(script.exec_path, exec_time, res)
-      self.db.add_log(msg.subject, script.name, log)
+      self.db.add_log(msg.subject, script.name, log, err_msg)
       logging.debug(f"script res: {res}, invoke end time: {exec_time}")
     except CalledProcessError as e:
       logging.error(f"CalledProcessError during invoke: {e}")

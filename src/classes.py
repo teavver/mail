@@ -21,7 +21,7 @@ class Defaults:
   REGEXP_FROM = ".*"
   REGEXP_TARGET = "title"
   FETCH_LIMIT = 50
-  POLL_INTERVAL_SECONDS = 5  # TODO: add support
+  POLL_INTERVAL_SECONDS = 4
 
 
 class EnvConfig(Struct):
@@ -87,6 +87,10 @@ class ScriptExecutionLog(Struct):
 class GeneralAppSettings(Struct):
   mode: AppMode = Defaults.APP_MODE
   fetch_limit: int = Defaults.FETCH_LIMIT
+  polling_interval: int = Defaults.POLL_INTERVAL_SECONDS
+
+  def __post_init__(self):
+    logging.debug(f"general settings: {json.dumps(msgspec.to_builtins(self), indent=2)}")
 
 
 class AppConfig(Struct):
