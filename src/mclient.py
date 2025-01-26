@@ -1,13 +1,15 @@
 import logging
-import subprocess
 import os
+import subprocess
+import threading
 from datetime import datetime
-from subprocess import CalledProcessError
-from .classes import AppConfig, ScriptConfig, ScriptExecutionLog, Defaults
-from typing import Literal, Tuple, cast
-from imap_tools import MailBox, MailMessage, MailboxLoginError
 from itertools import filterfalse
+from subprocess import CalledProcessError
+from typing import cast
+from imap_tools import MailBox, MailboxLoginError, MailMessage
+from src.interval import ThreadJob
 from src.storage import Storage
+from .classes import AppConfig, Defaults, ScriptConfig, ScriptExecutionLog
 
 
 class MailClient:
@@ -15,10 +17,27 @@ class MailClient:
     self.config = config
     self.db = storage
     self.mailbox: MailBox | None = None
-    self.last_uid: int | None = None
-    self.matches = []
+    # history mode
+    self.matches: list[tuple[MailMessage, ScriptConfig | None]] = []
+    # polling mode
+    self.is_polling: bool = False
+    self.poll_event: threading.Event | None = None
+    self.poll_thread: ThreadJob | None = None
+    self.last_uid: int = -1
+    # init polling thread
+    if config.general.mode == "polling":
+      self.poll_event = threading.Event()
+      self.poll_thread = ThreadJob(lambda: self.__poll(), self.poll_event, self.config.general.polling_interval)
+      logging.debug("init polling Thread ok")
 
-  def __eval_pattern(self, mail: MailMessage) -> Tuple[MailMessage, ScriptConfig | None]:
+  def __poll(self):
+    """(mode: polling) continuously check for new emails & eval against patterns"""
+    try:
+      logging.debug("POLLING NEW STUFF")
+    except Exception as e:
+      logging.error(f"exception during poll: {e}")
+
+  def __eval_pattern(self, mail: MailMessage) -> tuple[MailMessage, ScriptConfig | None]:
     try:
       for script in self.config.scripts:
         from_pattern = script.get_from_pattern()
@@ -45,21 +64,38 @@ class MailClient:
     except Exception as e:
       logging.error(f"mailbox login unknown err: {e}")
 
-  def fetch_inbox(self, mode: Literal["recent", "full"]):
-    limit = self.config.general.fetch_full if mode == "full" else self.config.general.fetch_recent
-    msgs_gen = (msg for msg in self.mailbox.fetch(limit=limit, reverse=True, charset="UTF-8"))
+  def pause_polling(self):
+    if not self.is_polling:
+      return logging.debug("pause_polling called when already off")
+    logging.debug("pause_polling")
+    self.poll_thread.pause()
+    self.is_polling = False
+
+  def start_polling(self):
+    if self.is_polling:
+      return logging.debug("start_polling called when already polling")
+    logging.debug("start_polling")
+    self.poll_thread.start()
+    self.__poll()
+    self.is_polling = True
+
+  def fetch_inbox(self):
+    """(mode: history) fetch last FETCH_LIMIT messages from mailbox & eval against patterns"""
+    msgs_gen = (msg for msg in self.mailbox.fetch(self.config.general.fetch_limit, reverse=True, charset="UTF-8"))
     eval_msgs = tuple([self.__eval_pattern(msg) for msg in msgs_gen])
     self.matches = list(filterfalse(lambda x: x is None or x[1] is None, eval_msgs))
     logging.debug(f"fetch_inbox matches count: {len(self.matches)}")
-    if self.matches:
-      self.last_uid = self.matches[-1][0].uid
 
   def invoke_script(self, idx: int):
+    assert self.matches[idx] is not None, "failed to invoke_script: no match with such idx"
     msg, script = cast(tuple[MailMessage, ScriptConfig], self.matches[idx])
     logging.debug("--- INVOKE START ---")
     logging.debug(f"{idx=}, {msg.subject=}, {script.exec_path=}")
     try:
-      assert os.path.isfile(script.exec_path), f"failed to call script - path does not exist ({script.exec_path=})"
+      err_msg = None
+      if not os.path.isfile(script.exec_path):
+        err_msg = f"failed to call script - path does not exist ({script.exec_path=})"
+        return logging.error(err_msg)
       if script.exec_once and self.db.get_log(script.name, script.exec_path):
         return logging.debug("script is 'exec_once' and was already executed, aborting")
       # TODO: add more flexible call - custom full exec path?
@@ -67,7 +103,7 @@ class MailClient:
       res = subprocess.call([py_call, script.exec_path])
       exec_time = datetime.now()
       log = ScriptExecutionLog(script.exec_path, exec_time, res)
-      self.db.add_log(msg.subject, script.name, log)
+      self.db.add_log(msg.subject, script.name, log, err_msg)
       logging.debug(f"script res: {res}, invoke end time: {exec_time}")
     except CalledProcessError as e:
       logging.error(f"CalledProcessError during invoke: {e}")

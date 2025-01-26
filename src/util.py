@@ -1,10 +1,10 @@
 import argparse
-import sys
-import os
 import logging
+import os
+import sys
 import msgspec
 from dotenv import load_dotenv
-from .classes import EnvConfig, AppConfig, AppArgs, Defaults
+from .classes import AppArgs, AppConfig, Defaults, EnvConfig
 
 
 def get_args() -> AppArgs:
@@ -47,3 +47,8 @@ def get_config() -> AppConfig:
   except Exception as e:
     logging.error(f"err during parse_config: {e}")
     sys.exit(1)
+
+
+def handle_quit(sig, frame):
+  logging.info("quitting")
+  sys.exit(0)

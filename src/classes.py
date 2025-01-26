@@ -1,24 +1,26 @@
+import json
+import logging
 import re
 import sys
-import json
-import msgspec
-import logging
-from datetime import datetime
-from msgspec import Struct, Meta
 from dataclasses import dataclass
-from typing import Literal, Optional, Annotated
-
+from datetime import datetime
+from typing import Annotated, Literal
+import msgspec
+from msgspec import Meta, Struct
 
 type RegexpTarget = Literal["title", "body"]
 
+type AppMode = Literal["polling", "history"]
+
 
 class Defaults:
+  APP_MODE = "polling"
   LOGFILE = "log.txt"
   PYTHON_VER = 3
   REGEXP_FROM = ".*"
   REGEXP_TARGET = "title"
-  FETCH_FULL = 500
-  FETCH_RECENT = 50
+  FETCH_LIMIT = 50
+  POLL_INTERVAL_SECONDS = 4
 
 
 class EnvConfig(Struct):
@@ -42,8 +44,8 @@ class ScriptConfig(Struct):
   regexp_target: RegexpTarget = Defaults.REGEXP_TARGET
   python_ver: Literal[2, 3] = Defaults.PYTHON_VER
   # internal
-  __from_pattern: Optional[re.Pattern] = None  # compiled pattern from 'regexp_from'
-  __main_pattern: Optional[re.Pattern] = None  # compiled pattern from 'regexp'
+  __from_pattern: re.Pattern | None = None  # compiled pattern from 'regexp_from'
+  __main_pattern: re.Pattern | None = None  # compiled pattern from 'regexp'
 
   def __validate_regexp(self, regexp_val: str) -> re.Pattern:
     try:
@@ -78,12 +80,16 @@ class ScriptExecutionLog(Struct):
   # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode
   code: int
   # additional info, e.g. call error
-  msg: Optional[str]
+  msg: str | None
 
 
 class GeneralAppSettings(Struct):
-  fetch_full: int = Defaults.FETCH_FULL
-  fetch_recent: int = Defaults.FETCH_RECENT
+  mode: AppMode = Defaults.APP_MODE
+  fetch_limit: int = Defaults.FETCH_LIMIT
+  polling_interval: int = Defaults.POLL_INTERVAL_SECONDS
+
+  def __post_init__(self):
+    logging.debug(f"general settings: {json.dumps(msgspec.to_builtins(self), indent=2)}")
 
 
 class AppConfig(Struct):
@@ -93,8 +99,8 @@ class AppConfig(Struct):
 
 
 class AppArgs(Struct):
-  debug: Optional[bool] = False
-  logfile: Optional[str] = Defaults.LOGFILE
+  debug: bool | None = False
+  logfile: str | None = Defaults.LOGFILE
 
 
 @dataclass
