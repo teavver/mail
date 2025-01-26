@@ -24,7 +24,7 @@ class MailClient:
     self.poll_thread: ThreadJob | None = None
     self.last_uid: int = -1
     # init polling thread
-    if config.general.mode == "polling":
+    if config.general.run_mode == "polling":
       self.poll_event = threading.Event()
       self.poll_thread = ThreadJob(lambda: self.__poll(), self.poll_event, self.config.general.polling_interval)
       logging.debug("init polling Thread ok")

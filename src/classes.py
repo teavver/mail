@@ -8,13 +8,18 @@ from typing import Annotated, Literal
 import msgspec
 from msgspec import Meta, Struct
 
+
 type RegexpTarget = Literal["title", "body"]
 
-type AppMode = Literal["polling", "history"]
+
+type ScriptMode = Literal["polling", "history"]
+
+
+type AppRunMode = Literal["all"] | ScriptMode
 
 
 class Defaults:
-  APP_MODE = "polling"
+  APP_RUN_MODE = "all"
   LOGFILE = "log.txt"
   REGEXP_FROM = ".*"
   REGEXP_MAIN_TARGET = "title"
@@ -34,6 +39,7 @@ class MailHostConfig(Struct):
 
 class ScriptConfig(Struct):
   # required
+  mode: ScriptMode
   name: Annotated[str, Meta(min_length=1)]
   exec_once: bool
   exec_path: Annotated[str, Meta(min_length=2)]
@@ -86,7 +92,7 @@ class ScriptExecutionLog(Struct):
 
 
 class GeneralAppSettings(Struct):
-  mode: AppMode = Defaults.APP_MODE
+  run_mode: AppRunMode = Defaults.APP_RUN_MODE
   fetch_limit: int = Defaults.FETCH_LIMIT
   polling_interval: int = Defaults.POLL_INTERVAL_SECONDS
 

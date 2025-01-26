@@ -14,6 +14,7 @@ def get_args() -> AppArgs:
   # TODO: add:
   # --config FILEPATH
   # --quiet NO LOGS AT ALL
+  # --force-mode (override)
   args = parser.parse_args()
   logging.basicConfig(
     level=logging.DEBUG if args.debug else logging.INFO,

@@ -1,6 +1,7 @@
 [general]
-mode = "polling"
-fetch_limit = 50
+mode = "history"
+fetch_limit = 30
+polling_interval = 3
 
 [mail]
 host = "imap.gmail.com"
@@ -9,14 +10,14 @@ port = 993
 [[scripts]]
 name = "sec"
 exec_once = true
-exec_path = "/Users/user/some_script.py"
-regexp = "Google"
+exec_path = "python3 /Users/USER/some_script.py --debug"
+regexp_main = "Google"
+regexp_main_target = "title"
 
 [[scripts]]
 name = "steam"
 exec_once = false
-exec_path = "..."
-regexp = "Steam"
-regexp_target = "title"                  # title | body
-regexp_from = "noreply@steampowered.com" # default = ".*" (match all)
-python_ver = 2                           # 2 | 3, default = 3
+exec_path = "node /Users/USER/test.js"
+regexp_from = "noreply@steampowered.com"
+regexp_main = "Sold"
+regexp_main_target = "title"
