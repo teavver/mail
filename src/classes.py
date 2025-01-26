@@ -11,14 +11,17 @@ from typing import Literal, Optional, Annotated
 
 type RegexpTarget = Literal["title", "body"]
 
+type AppMode = Literal["polling", "history"]
+
 
 class Defaults:
+  APP_MODE = "polling"
   LOGFILE = "log.txt"
   PYTHON_VER = 3
   REGEXP_FROM = ".*"
   REGEXP_TARGET = "title"
-  FETCH_FULL = 500
-  FETCH_RECENT = 50
+  FETCH_LIMIT = 50
+  POLL_INTERVAL_SECONDS = 5  # TODO: add support
 
 
 class EnvConfig(Struct):
@@ -82,8 +85,8 @@ class ScriptExecutionLog(Struct):
 
 
 class GeneralAppSettings(Struct):
-  fetch_full: int = Defaults.FETCH_FULL
-  fetch_recent: int = Defaults.FETCH_RECENT
+  mode: AppMode = Defaults.APP_MODE
+  fetch_limit: int = Defaults.FETCH_LIMIT
 
 
 class AppConfig(Struct):

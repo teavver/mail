@@ -1,5 +1,6 @@
 import logging
 import sys
+import time
 import src.util as util
 from src.classes import EnvConfig, AppConfig
 from src.mclient import MailClient
@@ -19,8 +20,15 @@ def main():
     logging.error("mail login failed")
     sys.exit(1)
 
-  mail.fetch_inbox("recent")
-  logging.info("initial fetch complete")
+  # mail.fetch_inbox("recent")
+  # logging.info("initial fetch complete")
+
+  logging.info("START")
+  mail.start_polling()
+
+  time.sleep(9)
+  mail.pause_polling()
+  logging.info("END")
 
   mail.run_auto()
   logging.info("done")
