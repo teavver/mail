@@ -1,6 +1,6 @@
 import logging
 import sys
-import time
+import signal
 import src.util as util
 from src.classes import EnvConfig, AppConfig
 from src.mclient import MailClient
@@ -14,24 +14,19 @@ def main():
   storage = Storage()
   mail = MailClient(config, storage)
   mail.login(env.MAIL_ADDR, env.MAIL_PWD)
-  assert mail is not None
-
   if mail is None:
     logging.error("mail login failed")
     sys.exit(1)
 
-  # mail.fetch_inbox("recent")
-  # logging.info("initial fetch complete")
-
-  logging.info("START")
-  mail.start_polling()
-
-  time.sleep(9)
-  mail.pause_polling()
-  logging.info("END")
-
-  mail.run_auto()
-  logging.info("done")
+  mode = config.general.mode
+  logging.debug(f"starting in {mode=} ...")
+  if mode == "polling":
+    signal.signal(signal.SIGINT, util.handle_quit)
+    mail.start_polling()
+  else:
+    mail.fetch_inbox()
+    mail.run_auto()
+    logging.info("done")
 
 
 if __name__ == "__main__":

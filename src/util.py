@@ -47,3 +47,8 @@ def get_config() -> AppConfig:
   except Exception as e:
     logging.error(f"err during parse_config: {e}")
     sys.exit(1)
+
+
+def handle_quit(sig, frame):
+  logging.info("quitting")
+  sys.exit(0)
