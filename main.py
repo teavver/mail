@@ -3,15 +3,15 @@ import signal
 import sys
 from timeit import default_timer as timer
 import src.util as util
-from src.classes import AppConfig, EnvConfig
+from src.classes import AppConfig, EnvConfig, AppArgs
 from src.mclient import MailClient
 from src.storage import Storage
 
 
 def main():
   env: EnvConfig = util.get_env()
-  args = util.get_args()
-  config: AppConfig = util.get_config()
+  args: AppArgs = util.get_args()
+  config: AppConfig = util.get_config(args)
   storage = Storage()
   mail = MailClient(config, storage, args)
   mail.login(env.MAIL_ADDR, env.MAIL_PWD)

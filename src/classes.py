@@ -27,6 +27,7 @@ class Defaults:
   FETCH_LIMIT = 50
   POLL_INTERVAL_SECONDS = 5
   # internal
+  CONFIG_PATH = "config.toml"
   MAIL_LOGIN_TIMEOUT = 60
 
 
@@ -114,6 +115,8 @@ class AppArgs(Struct):
   quiet: bool = False
   slow: bool = False
   logfile: str | None = Defaults.LOGFILE
+  custom_config: str | None = None
+  force_mode: AppRunMode | None = None
 
 
 @dataclass

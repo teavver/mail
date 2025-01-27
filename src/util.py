@@ -4,9 +4,9 @@ import os
 import sys
 import msgspec
 import json
+from msgspec import ValidationError
 from dotenv import load_dotenv
-from typing import Literal
-from .classes import AppArgs, AppConfig, Defaults, EnvConfig, AppRunMode
+from .classes import AppArgs, AppConfig, Defaults, EnvConfig
 
 
 def get_args() -> AppArgs:
@@ -42,11 +42,18 @@ def get_args() -> AppArgs:
     "-fm",
     "--force-mode",
     default=None,
-    type=Literal[AppRunMode],
-    help="force app mode regardless of what's set in your local or custom config",
+    type=str,
+    help="""
+    force app mode regardless of what's set in your local or custom config. supported vals: all | polling | history
+    """,
   )
   args = parser.parse_args()
-  app_args = msgspec.convert(args.__dict__, AppArgs)
+  app_args = None
+  try:
+    app_args = msgspec.convert(args.__dict__, type=AppArgs)
+  except ValidationError as e:
+    logging.error(f"err during args validation: {e}")
+    sys.exit(1)
   if app_args.logfile and not os.path.exists(app_args.logfile):
     logging.error("specified --logfile (-lf) path could not be resolved")
     sys.exit(1)
@@ -72,9 +79,10 @@ def get_env() -> EnvConfig:
     sys.exit(1)
 
 
-def get_config() -> AppConfig:
+def get_config(args: AppArgs) -> AppConfig:
+  config_path = args.custom_config or Defaults.CONFIG_PATH
   try:
-    with open("config.toml", "rb") as f:
+    with open(config_path, "rb") as f:
       config = msgspec.toml.decode(f.read(), type=AppConfig)
       unique_names = len({s.name for s in config.scripts}) == len(config.scripts)
       if not unique_names:
@@ -82,9 +90,11 @@ def get_config() -> AppConfig:
         sys.exit(1)
       logging.debug(f"get_config load OK: {config}")
       return config
+  except ValidationError as e:
+    logging.error(f"err during config validation: {e}")
   except Exception as e:
     logging.error(f"err during parse_config: {e}")
-    sys.exit(1)
+  sys.exit(1)
 
 
 def handle_quit(sig, frame):
