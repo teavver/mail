@@ -10,14 +10,16 @@ from src.storage import Storage
 
 def main():
   env: EnvConfig = util.get_env()
-  util.get_args()
+  args = util.get_args()
   config: AppConfig = util.get_config()
   storage = Storage()
-  mail = MailClient(config, storage)
+  mail = MailClient(config, storage, args)
   mail.login(env.MAIL_ADDR, env.MAIL_PWD)
   if mail is None:
     logging.error("mail login failed")
     sys.exit(1)
+
+  return
 
   def run_polling():
     signal.signal(signal.SIGINT, util.handle_quit)

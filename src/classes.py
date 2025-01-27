@@ -110,7 +110,9 @@ class AppConfig(Struct):
 
 
 class AppArgs(Struct):
-  debug: bool | None = False
+  debug: bool = False
+  quiet: bool = False
+  slow: bool = False
   logfile: str | None = Defaults.LOGFILE
 
 

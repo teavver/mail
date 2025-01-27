@@ -7,14 +7,15 @@ from subprocess import CalledProcessError
 from imap_tools import MailBox, MailboxLoginError, MailMessage
 from src.interval import ThreadJob
 from src.storage import Storage
-from .classes import AppConfig, Defaults, ScriptConfig, ScriptExecutionLog, ScriptMode
+from .classes import AppConfig, Defaults, ScriptConfig, ScriptExecutionLog, ScriptMode, AppArgs
 
 
 class MailClient:
-  def __init__(self, config: AppConfig, storage: Storage):
+  def __init__(self, config: AppConfig, storage: Storage, args: AppArgs):
     self.config = config
     self.db = storage
     self.mailbox: MailBox | None = None
+    self.app_args = args
     # history mode
     self.matches: list[tuple[MailMessage, ScriptConfig | None]] = []
     # polling mode
@@ -65,6 +66,7 @@ class MailClient:
       logging.error(f"fail during __eval_pattern: {e}")
 
   def login(self, login, pwd) -> MailBox:
+    logging.info("logging in...")
     try:
       mail = MailBox(self.config.mail.host, self.config.mail.port, Defaults.MAIL_LOGIN_TIMEOUT).login(login, pwd)
       self.mailbox = mail
@@ -99,10 +101,11 @@ class MailClient:
         f"app mode is '{self.config.general.run_mode}' but no history scripts found, skipping fetch_inbox"
       )
     logging.debug(f"fetching inbox ({self.config.general.fetch_limit})")
-    # TODO: change bulk setting for very high fetch_limit vals (<500?)
-    # TODO: maybe allow forcing bulk to False, for low-spec machines?
     msgs_gen = (
-      msg for msg in self.mailbox.fetch(limit=self.config.general.fetch_limit, reverse=True, charset="UTF-8", bulk=True)
+      msg
+      for msg in self.mailbox.fetch(
+        limit=self.config.general.fetch_limit, reverse=True, charset="UTF-8", bulk=(not self.app_args.slow)
+      )
     )
     eval_msgs = tuple([self.__eval_pattern(msg, "history") for msg in msgs_gen])
     self.matches = list(filterfalse(lambda x: x is None or x[1] is None, eval_msgs))

@@ -3,27 +3,61 @@ import logging
 import os
 import sys
 import msgspec
+import json
 from dotenv import load_dotenv
-from .classes import AppArgs, AppConfig, Defaults, EnvConfig
+from typing import Literal
+from .classes import AppArgs, AppConfig, Defaults, EnvConfig, AppRunMode
 
 
 def get_args() -> AppArgs:
   parser = argparse.ArgumentParser()
-  parser.add_argument("-d", "--debug", action="store_true")
-  parser.add_argument("--logfile", type=str)
-  # TODO: add:
-  # --config FILEPATH
-  # --quiet NO LOGS AT ALL
-  # --force-mode (override)
+  parser.add_argument(
+    "-d", "--debug", action="store_true", default=False, help="enable debug logging (affects both terminal and logfile)"
+  )
+  parser.add_argument(
+    "-q",
+    "--quiet",
+    action="store_true",
+    default=False,
+    help="log only errors to the terminal, does not affect logfile (ignores --debug value)",
+  )
+  parser.add_argument(
+    "-s",
+    "--slow",
+    action="store_true",
+    default=False,
+    help="messages are fetched one by one. much lower memory consumption than normal, also much slower",
+  )
+  parser.add_argument(
+    "-lf", "--logfile", default=None, type=str, help="use your own logfile instead of the default one"
+  )
+  parser.add_argument(
+    "-cc",
+    "--custom-config",
+    default=None,
+    type=str,
+    help="use your own config.toml from a path. Overrides local config",
+  )
+  parser.add_argument(
+    "-fm",
+    "--force-mode",
+    default=None,
+    type=Literal[AppRunMode],
+    help="force app mode regardless of what's set in your local or custom config",
+  )
   args = parser.parse_args()
+  app_args = msgspec.convert(args.__dict__, AppArgs)
+  if app_args.logfile and not os.path.exists(app_args.logfile):
+    logging.error("specified --logfile (-lf) path could not be resolved")
+    sys.exit(1)
+  log_level = logging.ERROR if app_args.quiet else logging.DEBUG if app_args.debug else logging.INFO
   logging.basicConfig(
-    level=logging.DEBUG if args.debug else logging.INFO,
+    level=log_level,
     format="%(levelname)s [%(asctime)s]: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[logging.FileHandler(args.logfile or Defaults.LOGFILE, mode="a"), logging.StreamHandler()],
+    handlers=[logging.FileHandler(app_args.logfile or Defaults.LOGFILE, mode="a"), logging.StreamHandler()],
   )
-  logging.debug(f"args: {args}")
-  app_args = msgspec.convert(args.__dict__, AppArgs)
+  logging.debug(f"args: {json.dumps(args.__dict__, indent=2)}")
   return app_args
 
 
