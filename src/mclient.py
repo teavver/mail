@@ -4,7 +4,7 @@ import threading
 from datetime import datetime
 from itertools import filterfalse
 from subprocess import CalledProcessError
-from imap_tools import A, MailBox, MailboxLoginError, MailMessage
+from imap_tools import MailBox, MailboxLoginError, MailMessage
 from src.interval import ThreadJob
 from src.storage import Storage
 from .classes import AppConfig, Defaults, ScriptConfig, ScriptExecutionLog, ScriptMode
@@ -18,28 +18,30 @@ class MailClient:
     # history mode
     self.matches: list[tuple[MailMessage, ScriptConfig | None]] = []
     # polling mode
-    self.is_polling: bool = False
+    self.last_uid: int = -1
+    # TODO: tweak poll_limit, temp solution here
+    self.poll_limit = round(self.config.general.polling_interval * 0.02) + 2
     self.poll_event: threading.Event | None = None
     self.poll_thread: ThreadJob | None = None
-    self.last_uid: int = -1
+    self.is_polling: bool = False
     # init polling thread
     if any(script.mode == "polling" for script in self.config.scripts):
       self.poll_event = threading.Event()
       self.poll_thread = ThreadJob(lambda: self.__poll(), self.poll_event, self.config.general.polling_interval)
-      logging.debug("init polling Thread ok")
+      logging.debug(f"init polling thread ok. poll limit: {self.poll_limit}")
 
   def __poll(self):
     """(mode: polling) continuously check for new emails & eval against patterns"""
-    logging.info("polling")
     try:
-      res = self.mailbox.idle.poll(timeout=self.config.general.polling_interval)
-      logging.info(f"res {len(res)}")
-      if res:
-        logging.info("pre fetch")
-        for msg in self.mailbox.fetch(A(seen=False)):
-          logging.info(f"polling: new msg: {msg.subject}")
-          msg, script = self.__eval_pattern(msg, "polling")
-          self.invoke_script(msg, script)
+      msgs_gen = (msg for msg in self.mailbox.fetch(limit=self.poll_limit, charset="UTF-8", reverse=True, bulk=True))
+      last_msg: MailMessage = max(list(msgs_gen), key=lambda msg: int(msg.uid))
+      if self.last_uid is not -1 and last_msg.uid != self.last_uid:
+        (msg, script) = self.__eval_pattern(last_msg, "polling")
+        if script is None:
+          return logging.debug("poll got msg but no match")
+        logging.debug(f"poll got new match: {msg.subject=}, {msg.uid=}")
+        self.invoke_script(msg, script)
+      self.last_uid = last_msg.uid
     except Exception as e:
       logging.error(f"exception during poll: {e}")
 
@@ -50,17 +52,17 @@ class MailClient:
           return (msg, None)
         from_pattern = script.get_from_pattern()
         if from_pattern != Defaults.REGEXP_FROM and not from_pattern.match(msg.from_):
-          logging.debug(f"MAIL SENDER NOT MATCH, expected: {from_pattern}, got: {msg.from_}")
+          logging.debug(f"msg.from did not match, expected: {from_pattern}, got: {msg.from_}")
           return (msg, None)
         src = msg.text if script.regexp_main_target == "body" else msg.subject
         res = script.get_main_pattern().match(src)
         if res:
           logging.debug(f"eval match: subject: {msg.subject}, target: {script.regexp_main_target}, res: {res}")
           return (msg, script)
-      logging.debug(f"MAIN_REGEX NOT MATCH, expected: {src}")
+      logging.debug(f"eval main regex did not match, expected: {src}")
       return (msg, None)
     except Exception as e:
-      logging.error(f"fail during eval_mail: {e}")
+      logging.error(f"fail during __eval_pattern: {e}")
 
   def login(self, login, pwd) -> MailBox:
     try:
@@ -75,8 +77,8 @@ class MailClient:
 
   def stop_polling(self):
     if not self.is_polling:
-      return logging.debug("pause_polling called when already off")
-    logging.debug("pause_polling")
+      return logging.debug("stop_polling called when already off")
+    logging.debug("stop_polling")
     self.poll_thread.pause()
     self.is_polling = False
 
