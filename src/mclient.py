@@ -30,10 +30,13 @@ class MailClient:
 
   def __poll(self):
     """(mode: polling) continuously check for new emails & eval against patterns"""
+    logging.info("polling")
     try:
       res = self.mailbox.idle.poll(timeout=self.config.general.polling_interval)
+      logging.info(f"res {len(res)}")
       if res:
-        for msg in self.mailbox.idle.wait(A(seen=False)):
+        logging.info("pre fetch")
+        for msg in self.mailbox.fetch(A(seen=False)):
           logging.info(f"polling: new msg: {msg.subject}")
           msg, script = self.__eval_pattern(msg, "polling")
           self.invoke_script(msg, script)
@@ -80,6 +83,8 @@ class MailClient:
   def start_polling(self):
     if self.is_polling:
       return logging.debug("start_polling called when already polling")
+    if not any(script.mode == "polling" for script in self.config.scripts):
+      return logging.debug("start_polling ignored - no polling scripts in config")
     logging.debug("start_polling")
     self.poll_thread.start()
     self.__poll()
@@ -87,11 +92,19 @@ class MailClient:
 
   def fetch_inbox(self):
     """(mode: history) fetch last FETCH_LIMIT messages from mailbox & eval against patterns"""
+    if not any(script.mode == "history" for script in self.config.scripts):
+      return logging.debug(
+        f"app mode is '{self.config.general.run_mode}' but no history scripts found, skipping fetch_inbox"
+      )
     logging.debug(f"fetching inbox ({self.config.general.fetch_limit})")
-    msgs_gen = (msg for msg in self.mailbox.fetch(limit=self.config.general.fetch_limit, reverse=True, charset="UTF-8"))
+    # TODO: change bulk setting for very high fetch_limit vals (<500?)
+    # TODO: maybe allow forcing bulk to False, for low-spec machines?
+    msgs_gen = (
+      msg for msg in self.mailbox.fetch(limit=self.config.general.fetch_limit, reverse=True, charset="UTF-8", bulk=True)
+    )
     eval_msgs = tuple([self.__eval_pattern(msg, "history") for msg in msgs_gen])
     self.matches = list(filterfalse(lambda x: x is None or x[1] is None, eval_msgs))
-    logging.debug(f"fetch_inbox matches count: {len(self.matches)}")
+    logging.debug(f"fetch_inbox match count: {len(self.matches)}")
 
   def invoke_script(self, msg: MailMessage, script: ScriptConfig | None):
     if script is None:

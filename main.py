@@ -1,6 +1,7 @@
 import logging
 import signal
 import sys
+from timeit import default_timer as timer
 import src.util as util
 from src.classes import AppConfig, EnvConfig
 from src.mclient import MailClient
@@ -23,7 +24,10 @@ def main():
     mail.start_polling()
 
   def run_history():
+    s = timer()
     mail.fetch_inbox()
+    e = timer()
+    logging.debug(f"fetch took: {e - s}s")
     mail.run_auto()
 
   mode = config.general.run_mode
@@ -31,10 +35,8 @@ def main():
   # TODO: handle --force-mode flag here
   run = {"history": run_history, "polling": run_polling}
   if mode == "all":
-    print("RUN ALL")
     [func() for func in run.values()]
   else:
-    print(f"RUN {mode}")
     run[mode]()
 
 
