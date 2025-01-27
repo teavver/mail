@@ -1,18 +1,19 @@
 import logging
 import signal
 import sys
+from timeit import default_timer as timer
 import src.util as util
-from src.classes import AppConfig, EnvConfig
+from src.classes import AppConfig, EnvConfig, AppArgs
 from src.mclient import MailClient
 from src.storage import Storage
 
 
 def main():
   env: EnvConfig = util.get_env()
-  util.get_args()
-  config: AppConfig = util.get_config()
+  args: AppArgs = util.get_args()
+  config: AppConfig = util.get_config(args)
   storage = Storage()
-  mail = MailClient(config, storage)
+  mail = MailClient(config, storage, args)
   mail.login(env.MAIL_ADDR, env.MAIL_PWD)
   if mail is None:
     logging.error("mail login failed")
@@ -23,18 +24,18 @@ def main():
     mail.start_polling()
 
   def run_history():
+    s = timer()
     mail.fetch_inbox()
+    e = timer()
+    logging.debug(f"fetch took: {e - s}s")
     mail.run_auto()
 
   mode = config.general.run_mode
-  logging.info(f"starting in {mode=} ...")
-  # TODO: handle --force-mode flag here
+  logging.info(f"starting in {mode=} {'(forced)' if args.force_mode else ''}...")
   run = {"history": run_history, "polling": run_polling}
   if mode == "all":
-    print("RUN ALL")
     [func() for func in run.values()]
   else:
-    print(f"RUN {mode}")
     run[mode]()
 
 
