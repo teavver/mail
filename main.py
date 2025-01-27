@@ -19,8 +19,6 @@ def main():
     logging.error("mail login failed")
     sys.exit(1)
 
-  return
-
   def run_polling():
     signal.signal(signal.SIGINT, util.handle_quit)
     mail.start_polling()
@@ -33,8 +31,7 @@ def main():
     mail.run_auto()
 
   mode = config.general.run_mode
-  logging.info(f"starting in {mode=} ...")
-  # TODO: handle --force-mode flag here
+  logging.info(f"starting in {mode=} {'(forced)' if args.force_mode else ''}...")
   run = {"history": run_history, "polling": run_polling}
   if mode == "all":
     [func() for func in run.values()]

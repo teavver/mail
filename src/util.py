@@ -55,7 +55,7 @@ def get_args() -> AppArgs:
     logging.error(f"err during args validation: {e}")
     sys.exit(1)
   if app_args.logfile and not os.path.exists(app_args.logfile):
-    logging.error("specified --logfile (-lf) path could not be resolved")
+    logging.error("specified --logfile (-lf) path could not be resolved, does the file exist?")
     sys.exit(1)
   log_level = logging.ERROR if app_args.quiet else logging.DEBUG if app_args.debug else logging.INFO
   logging.basicConfig(
@@ -88,6 +88,8 @@ def get_config(args: AppArgs) -> AppConfig:
       if not unique_names:
         logging.error("script names must be unique")
         sys.exit(1)
+      if args.force_mode is not None:
+        config.general.run_mode = args.force_mode
       logging.debug(f"get_config load OK: {config}")
       return config
   except ValidationError as e:
