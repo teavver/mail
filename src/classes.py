@@ -105,6 +105,7 @@ class GeneralAppSettings(Struct):
   run_mode: AppRunMode
   fetch_limit: int = Defaults.FETCH_LIMIT
   polling_interval: int = Defaults.POLL_INTERVAL_SECONDS
+  polling_timeout: Annotated[int, Meta(ge=0)] = 0
 
   def __post_init__(self):
     logging.debug(f"general settings: {json.dumps(msgspec.to_builtins(self), indent=2)}")

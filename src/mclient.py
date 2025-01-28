@@ -61,7 +61,7 @@ class MailClient:
         if res:
           logging.debug(f"eval match: subject: {msg.subject}, target: {script.regexp_main_target}, res: {res}")
           return (msg, script)
-      logging.debug(f"eval main regex did not match, expected: {src}")
+      logging.debug(f"eval main regex did not match, subject: '{msg.subject}'")
       return (msg, None)
     except Exception as e:
       logging.error(f"fail during __eval_pattern: {e}")
@@ -78,6 +78,12 @@ class MailClient:
     except Exception as e:
       logging.error(f"mailbox login unknown err: {e}")
     sys.exit(1)
+
+  def quit_polling(self):
+    self.stop_polling()
+    self.poll_event.set()
+    logging.debug("quitting (polling mode timeout)")
+    sys.exit(0)
 
   def stop_polling(self):
     if not self.is_polling:
