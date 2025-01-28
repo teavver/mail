@@ -65,10 +65,11 @@ class MailClient:
     except Exception as e:
       logging.error(f"fail during __eval_pattern: {e}")
 
-  def login(self, login, pwd) -> MailBox:
-    logging.info("logging in...")
+  def login(self, login, pwd) -> MailBox | None:
+    logging.info(f"logging in ({login=})...")
     try:
       mail = MailBox(self.config.mail.host, self.config.mail.port, Defaults.MAIL_LOGIN_TIMEOUT).login(login, pwd)
+      print(mail.login_result)
       self.mailbox = mail
       logging.info("mailbox login success")
       return mail
@@ -76,6 +77,7 @@ class MailClient:
       logging.error(f"mailbox login err: {e}")
     except Exception as e:
       logging.error(f"mailbox login unknown err: {e}")
+    return None
 
   def stop_polling(self):
     if not self.is_polling:

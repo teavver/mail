@@ -14,7 +14,12 @@ def main():
   config: AppConfig = util.get_config(args)
   storage = Storage()
   mail = MailClient(config, storage, args)
-  mail.login(env.MAIL_ADDR, env.MAIL_PWD)
+  login = env.LOGIN or config.mail.login
+  pwd = env.PASSWORD or config.mail.password
+  if any(cred is None for cred in [login, pwd]):
+    logging.error("missing login credentials in .env or config.toml")
+    sys.exit(1)
+  mail.login(login, pwd)
   if mail is None:
     logging.error("mail login failed")
     sys.exit(1)

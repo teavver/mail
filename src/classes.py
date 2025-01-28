@@ -32,13 +32,19 @@ class Defaults:
 
 
 class EnvConfig(Struct):
-  MAIL_ADDR: str
-  MAIL_PWD: str
+  LOGIN: str | None = None
+  PASSWORD: str | None = None
 
 
-class MailHostConfig(Struct):
+class MailBoxConfig(Struct):
   host: str
   port: int
+  # allow storing credentials in config.toml instead of .env as fallback
+  login: str | None = None
+  password: str | None = None
+
+  def __post_init__(self):
+    logging.debug(f"mailbox config: {json.dumps(msgspec.to_builtins(self), indent=2)}")
 
 
 class ScriptConfig(Struct):
@@ -106,7 +112,7 @@ class GeneralAppSettings(Struct):
 
 class AppConfig(Struct):
   general: GeneralAppSettings
-  mail: MailHostConfig
+  mail: MailBoxConfig
   scripts: list[ScriptConfig]
 
 
@@ -123,7 +129,7 @@ class AppArgs(Struct):
 class MailClient:
   email: str
   pwd: str
-  host: MailHostConfig
+  host: MailBoxConfig
 
 
 @dataclass
