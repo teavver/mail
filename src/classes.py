@@ -26,18 +26,26 @@ class Defaults:
   REGEXP_MAIN_TARGET = "title"
   FETCH_LIMIT = 50
   POLL_INTERVAL_SECONDS = 5
+  POLL_TIMEOUT = 0
   # internal
+  CONFIG_PATH = "config.toml"
   MAIL_LOGIN_TIMEOUT = 60
 
 
 class EnvConfig(Struct):
-  MAIL_ADDR: str
-  MAIL_PWD: str
+  LOGIN: str | None = None
+  PASSWORD: str | None = None
 
 
-class MailHostConfig(Struct):
+class MailBoxConfig(Struct):
   host: str
   port: int
+  # allow storing credentials in config.toml instead of .env as fallback
+  login: str | None = None
+  password: str | None = None
+
+  def __post_init__(self):
+    logging.debug(f"mailbox config: {json.dumps(msgspec.to_builtins(self), indent=2)}")
 
 
 class ScriptConfig(Struct):
@@ -98,6 +106,7 @@ class GeneralAppSettings(Struct):
   run_mode: AppRunMode
   fetch_limit: int = Defaults.FETCH_LIMIT
   polling_interval: int = Defaults.POLL_INTERVAL_SECONDS
+  polling_timeout: Annotated[int, Meta(ge=0)] = Defaults.POLL_TIMEOUT
 
   def __post_init__(self):
     logging.debug(f"general settings: {json.dumps(msgspec.to_builtins(self), indent=2)}")
@@ -105,20 +114,24 @@ class GeneralAppSettings(Struct):
 
 class AppConfig(Struct):
   general: GeneralAppSettings
-  mail: MailHostConfig
+  mail: MailBoxConfig
   scripts: list[ScriptConfig]
 
 
 class AppArgs(Struct):
-  debug: bool | None = False
+  debug: bool = False
+  quiet: bool = False
+  slow: bool = False
   logfile: str | None = Defaults.LOGFILE
+  custom_config: str | None = None
+  force_mode: AppRunMode | None = None
 
 
 @dataclass
 class MailClient:
   email: str
   pwd: str
-  host: MailHostConfig
+  host: MailBoxConfig
 
 
 @dataclass
