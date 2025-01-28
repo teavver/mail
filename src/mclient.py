@@ -1,3 +1,4 @@
+import sys
 import logging
 import subprocess
 import threading
@@ -69,7 +70,6 @@ class MailClient:
     logging.info(f"logging in ({login=})...")
     try:
       mail = MailBox(self.config.mail.host, self.config.mail.port, Defaults.MAIL_LOGIN_TIMEOUT).login(login, pwd)
-      print(mail.login_result)
       self.mailbox = mail
       logging.info("mailbox login success")
       return mail
@@ -77,7 +77,7 @@ class MailClient:
       logging.error(f"mailbox login err: {e}")
     except Exception as e:
       logging.error(f"mailbox login unknown err: {e}")
-    return None
+    sys.exit(1)
 
   def stop_polling(self):
     if not self.is_polling:
