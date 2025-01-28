@@ -12,7 +12,7 @@ from .classes import AppArgs, AppConfig, Defaults, EnvConfig
 def get_args() -> AppArgs:
   parser = argparse.ArgumentParser()
   parser.add_argument(
-    "-d", "--debug", action="store_true", default=False, help="enable debug logging (affects both terminal and logfile)"
+    "-d", "--debug", action="store_true", default=False, help="enable debug logging (affects only terminal output)"
   )
   parser.add_argument(
     "-q",

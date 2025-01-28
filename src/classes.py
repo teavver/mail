@@ -26,6 +26,7 @@ class Defaults:
   REGEXP_MAIN_TARGET = "title"
   FETCH_LIMIT = 50
   POLL_INTERVAL_SECONDS = 5
+  POLL_TIMEOUT = 0
   # internal
   CONFIG_PATH = "config.toml"
   MAIL_LOGIN_TIMEOUT = 60
@@ -105,7 +106,7 @@ class GeneralAppSettings(Struct):
   run_mode: AppRunMode
   fetch_limit: int = Defaults.FETCH_LIMIT
   polling_interval: int = Defaults.POLL_INTERVAL_SECONDS
-  polling_timeout: Annotated[int, Meta(ge=0)] = 0
+  polling_timeout: Annotated[int, Meta(ge=0)] = Defaults.POLL_TIMEOUT
 
   def __post_init__(self):
     logging.debug(f"general settings: {json.dumps(msgspec.to_builtins(self), indent=2)}")
