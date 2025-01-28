@@ -10,10 +10,6 @@ match incoming/existing messages against regex patterns and execute local script
 3. `uv pip install -e .`
 4. or full (development): `uv pip install -e .[testing,linting]`
 
-## script mode
-
-- polling = will continuously check for new 
-
 ## how to get imap host and app password for email
 
 gmail:
@@ -24,7 +20,12 @@ icloud
 - https://support.apple.com/en-us/102654
 - host: `imap.mail.me.com`
 
-## example config
+## script mode
+
+- `polling` = will continuously check for new messages and check against script config
+- `history` = fetch `fetch_limit` existing messages and match
+
+## example config.toml
 
 it is recommended to load `login` and `password` from .env instead of config.toml
 
@@ -34,6 +35,7 @@ it is recommended to load `login` and `password` from .env instead of config.tom
 [general]
 run_mode = "all" # all | history | polling (default = all)
 # when 'all', history scripts are executed first, then polling
+# single mode run_mode will ignore any scripts not matching run_mode from config
 fetch_limit = 100 # how many msgs to fetch in history mode (default = 50)
 polling_interval = 5 # check for new msgs every N seconds (default = 5)
 polling_timeout = 240 # quit after N seconds, regardless of matches. 0 for no timeout (default = 0)
@@ -74,6 +76,3 @@ see `--help` for details
 | -lf --logfile       | None          | provide custom path to your logfile, if you don't want to use the default logs.txt one                                                                                                    |
 | -cc --custom-config | None          | provide path to a valid config.toml file to use instead of the local one. useful when calling this tool from other automation tools, e.g. cron                                            |
 | -fm --force-mode    | None          | override the app run mode defined in your config                                                                                                                                          |
-
-
-
