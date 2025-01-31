@@ -130,7 +130,7 @@ class MailClient:
         return logging.debug("script is 'exec_once' and was already executed, aborting")
       res = subprocess.run(script.exec_path.split(" "), check=True)
       exec_time = datetime.now()
-      log = ScriptExecutionLog(script.exec_path, exec_time, res.returncode)
+      log = ScriptExecutionLog(script.exec_path, exec_time, script.regexp_main, res.returncode)
       self.db.add_log(msg.subject, script.name, log)
       logging.debug(f"script res: {res}, invoke end time: {exec_time}")
       logging.debug("--- INVOKE END ---")
@@ -140,7 +140,7 @@ class MailClient:
     except Exception as e:
       err_msg = f"Exception during invoke: {e}"
     logging.error(err_msg)
-    log = ScriptExecutionLog(script.exec_path, datetime.now(), -1, err_msg)
+    log = ScriptExecutionLog(script.exec_path, datetime.now(), script.regexp_main, -1, err_msg)
     self.db.add_log(msg.subject, script.name, log)
     logging.debug("--- INVOKE END (ERR) ---")
 

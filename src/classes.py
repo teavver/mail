@@ -94,6 +94,8 @@ class ScriptExecutionLog(Struct):
   exec_path: str
   # timestamp when the script finished (or exception was thrown)
   exec_ts: datetime
+  # main regexp from the script's config
+  regexp_main: str
   # return code of subprocess.run()
   # -1 indicates that the run() call did not start successfully
   # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode
