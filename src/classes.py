@@ -31,6 +31,8 @@ class Defaults:
   CONFIG_PATH = "config.toml"
   MAIL_LOGIN_TIMEOUT = 60
   MAX_LINES_LOGFILE = 10000
+  # afaik all standard unix error codes are uints, should be fine
+  GENERIC_ERROR_RETURN_CODE = -1
 
 
 class EnvConfig(Struct):
