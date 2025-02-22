@@ -30,6 +30,7 @@ class Defaults:
   # internal
   CONFIG_PATH = "config.toml"
   MAIL_LOGIN_TIMEOUT = 60
+  MAX_LINES_LOGFILE = 10000
 
 
 class EnvConfig(Struct):

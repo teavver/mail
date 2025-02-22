@@ -1,3 +1,4 @@
+import json
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -8,10 +9,10 @@ from src.classes import Log, ScriptExecutionLog
 
 class Storage:
   def __init__(self):
-    curdir = Path(".").resolve()
     self.filename = "storage.json"
     self.q_property = "mail_subject"
-    store_path = Path.joinpath(curdir, self.filename)
+    directory = Path(__file__).resolve().parent.parent
+    store_path = Path.joinpath(directory, self.filename)
     self.db = TinyDB(store_path)
     logging.debug(f"storage init {store_path=}")
 
@@ -21,12 +22,12 @@ class Storage:
       ts = datetime.now()
       logging.debug(f"add_log call: ts: {ts} , exists: {exists}")
       db_log = Log(ts, script_name, log)
-      json = msgspec.to_builtins(db_log)
+      data = msgspec.to_builtins(db_log)
       if exists:
-        self.db.update(json, where("log")[self.q_property] == log.mail_subject)
+        self.db.update(data, where("log")[self.q_property] == log.mail_subject)
       else:
-        self.db.insert(json)
-      logging.debug(f"{'updated' if exists else 'added'} log, obj: {json}")
+        self.db.insert(data)
+      logging.debug(f"{'updated' if exists else 'added'} log, obj: {json.dumps(data, indent=2)}")
     except Exception as e:
       logging.error(f"err during store_log: {e}")
 
