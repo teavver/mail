@@ -90,18 +90,21 @@ class ScriptConfig(Struct):
 
 
 class ScriptExecutionLog(Struct):
-  # absolute path of the script
+  # subject of mail that matched regexp_main
+  mail_subject: str
+  # abs path of the script
   exec_path: str
-  # timestamp when the script finished (or exception was thrown)
+  # timestamp when the script exited
   exec_ts: datetime
+  # from script conf
+  exec_once: bool
   # main regexp from the script's config
   regexp_main: str
   # return code of subprocess.run()
-  # -1 indicates that the run() call did not start successfully
   # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode
   code: int
-  # additional info, e.g. call error
-  msg: str | None = None
+  # additional info: script's stderr + any errors that occurred while calling the script
+  msgs: list[str] = []
 
 
 class GeneralAppSettings(Struct):
@@ -140,5 +143,4 @@ class MailClient:
 class Log:
   ts: str
   script_name: str
-  subject: str
   log: ScriptExecutionLog
