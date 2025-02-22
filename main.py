@@ -5,7 +5,7 @@ import threading
 from timeit import default_timer as timer
 import src.util as util
 from src.classes import AppConfig, EnvConfig, AppArgs
-from src.mclient import MailClient
+from mail_client import MailClient
 from src.storage import Storage
 
 
