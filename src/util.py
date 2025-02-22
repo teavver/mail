@@ -1,9 +1,11 @@
 import argparse
 import logging
 import os
+from pathlib import Path
 import sys
 import msgspec
 import json
+from logging import handlers
 from msgspec import ValidationError
 from dotenv import load_dotenv
 from .classes import AppArgs, AppConfig, Defaults, EnvConfig
@@ -57,12 +59,13 @@ def get_args() -> AppArgs:
   if app_args.logfile and not os.path.exists(app_args.logfile):
     logging.error("specified --logfile (-lf) path could not be resolved, does the file exist?")
     sys.exit(1)
+  app_args.logfile = app_args.logfile or Defaults.LOGFILE
   log_level = logging.ERROR if app_args.quiet else logging.DEBUG if app_args.debug else logging.INFO
   logging.basicConfig(
     level=log_level,
     format="%(levelname)s [%(asctime)s]: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[logging.FileHandler(app_args.logfile or Defaults.LOGFILE, mode="a"), logging.StreamHandler()],
+    handlers=[handlers.WatchedFileHandler(app_args.logfile), logging.StreamHandler()],
   )
   logging.debug(f"args: {json.dumps(args.__dict__, indent=2)}")
   return app_args
@@ -80,7 +83,9 @@ def get_env() -> EnvConfig:
 
 
 def get_config(args: AppArgs) -> AppConfig:
-  config_path = args.custom_config or Defaults.CONFIG_PATH
+  directory = Path(__file__).resolve().parent.parent
+  config_file = args.custom_config or Defaults.CONFIG_PATH
+  config_path = Path.joinpath(directory, config_file)
   try:
     with open(config_path, "rb") as f:
       config = msgspec.toml.decode(f.read(), type=AppConfig)
@@ -97,6 +102,14 @@ def get_config(args: AppArgs) -> AppConfig:
   except Exception as e:
     logging.error(f"err during parse_config: {e}")
   sys.exit(1)
+
+
+def rotate_logs(logfile):
+  old_log_filename = f"_old_{logfile}"
+  num_lines = sum(1 for _ in open(logfile))
+  if num_lines >= Defaults.MAX_LINES_LOGFILE:
+    logging.debug("rotating logfile")
+    os.rename(logfile, old_log_filename)
 
 
 def handle_quit(sig, frame):

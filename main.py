@@ -5,7 +5,7 @@ import threading
 from timeit import default_timer as timer
 import src.util as util
 from src.classes import AppConfig, EnvConfig, AppArgs
-from src.mclient import MailClient
+from mail_client import MailClient
 from src.storage import Storage
 
 
@@ -16,6 +16,7 @@ def main():
   storage = Storage()
   mail = MailClient(config, storage, args)
 
+  util.rotate_logs(args.logfile)
   login = env.LOGIN or config.mail.login
   pwd = env.PASSWORD or config.mail.password
   if any(cred is None for cred in [login, pwd]):

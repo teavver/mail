@@ -122,27 +122,40 @@ class MailClient:
   def invoke_script(self, msg: MailMessage, script: ScriptConfig | None):
     if script is None:
       return
-    logging.debug("--- INVOKE START ---")
+    logging.debug("--- invoke start ---")
     logging.debug(f"{msg.subject=}, {script.exec_path=}")
     try:
-      err_msg = None
-      if script.exec_once and self.db.get_log(script.name, script.exec_path):
+      script_msgs = []
+      if script.exec_once and self.db.log_exists(script.name, msg.subject):
         return logging.debug("script is 'exec_once' and was already executed, aborting")
-      res = subprocess.run(script.exec_path.split(" "), check=True)
+      res = subprocess.run(script.exec_path.split(" "), capture_output=True, check=True)
+      if res.stderr:
+        script_stderr = f"(script): {res.stderr.decode()}"
+        script_msgs.append(script_stderr)
       exec_time = datetime.now()
-      log = ScriptExecutionLog(script.exec_path, exec_time, res.returncode)
-      self.db.add_log(msg.subject, script.name, log)
+      log = ScriptExecutionLog(
+        msg.subject, script.exec_path, exec_time, script.exec_once, script.regexp_main, res.returncode, script_msgs
+      )
+      self.db.add_log(script.name, log)
       logging.debug(f"script res: {res}, invoke end time: {exec_time}")
-      logging.debug("--- INVOKE END ---")
+      logging.debug("--- invoke end ---")
       return
     except CalledProcessError as e:
-      err_msg = f"CalledProcessError during invoke: {e}"
+      err_msg = f"(script caller): CalledProcessError during invoke: {e}"
     except Exception as e:
-      err_msg = f"Exception during invoke: {e}"
+      err_msg = f"(script caller): Exception during invoke: {e}"
     logging.error(err_msg)
-    log = ScriptExecutionLog(script.exec_path, datetime.now(), -1, err_msg)
-    self.db.add_log(msg.subject, script.name, log)
-    logging.debug("--- INVOKE END (ERR) ---")
+    log = ScriptExecutionLog(
+      msg.subject,
+      script.exec_path,
+      datetime.now(),
+      script.exec_once,
+      script.regexp_main,
+      Defaults.GENERIC_ERROR_RETURN_CODE,
+      err_msg,
+    )
+    self.db.add_log(script.name, log)
+    logging.debug("--- invoke end (err) ---")
 
   def run_auto(self):
     [self.invoke_script(msg, script) for msg, script in self.matches]
