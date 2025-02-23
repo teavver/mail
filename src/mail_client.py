@@ -8,7 +8,7 @@ from subprocess import CalledProcessError
 from imap_tools import MailBox, MailboxLoginError, MailMessage
 from src.interval import ThreadJob
 from src.storage import Storage
-from .classes import AppConfig, Defaults, ScriptConfig, ScriptExecutionLog, ScriptMode, AppArgs
+from src.classes import AppConfig, Defaults, ScriptConfig, ScriptExecutionLog, ScriptMode, AppArgs
 
 
 class MailClient:

@@ -8,7 +8,7 @@ import json
 from logging import handlers
 from msgspec import ValidationError
 from dotenv import load_dotenv
-from .classes import AppArgs, AppConfig, Defaults, EnvConfig
+from src.classes import AppArgs, AppConfig, Defaults, EnvConfig
 
 
 def get_args() -> AppArgs:
