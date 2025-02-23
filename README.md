@@ -62,6 +62,7 @@ exec_path = "node /Users/USER/test.js"
 regexp_from = "noreply@steampowered.com" # match only if this address sent the message
 regexp_main = "Sold"
 regexp_main_target = "body" # match regexp_main against body
+pipe_html = true # forward the mail's content (html) to my script
 ```
 
 ## args

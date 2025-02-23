@@ -58,7 +58,8 @@ class ScriptConfig(Struct):
   exec_once: bool
   exec_path: Annotated[str, Meta(min_length=2)]
   regexp_main: Annotated[str, Meta(min_length=1)]
-  # defaults
+  # optional
+  pipe_html: bool = False
   regexp_from: Annotated[str, Meta(min_length=1)] = Defaults.REGEXP_FROM
   regexp_main_target: RegexpTarget = Defaults.REGEXP_MAIN_TARGET
   # internal

@@ -2,9 +2,9 @@ import sys
 import logging
 import subprocess
 import threading
+import shlex
 from datetime import datetime
 from itertools import filterfalse
-from subprocess import CalledProcessError
 from imap_tools import MailBox, MailboxLoginError, MailMessage
 from src.interval import ThreadJob
 from src.storage import Storage
@@ -128,22 +128,22 @@ class MailClient:
       script_msgs = []
       if script.exec_once and self.db.log_exists(script.name, msg.subject):
         return logging.debug("script is 'exec_once' and was already executed, aborting")
-      res = subprocess.run(script.exec_path.split(" "), capture_output=True, check=True)
+      script_cmd = shlex.split(script.exec_path)
+      cmd_full = script_cmd + ([msg.html] if script.pipe_html else [])
+      res = subprocess.run(cmd_full, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
       if res.stderr:
-        script_stderr = f"(script): {res.stderr.decode()}"
+        script_stderr = f"(script stderr): {res.stderr}"
         script_msgs.append(script_stderr)
       exec_time = datetime.now()
       log = ScriptExecutionLog(
         msg.subject, script.exec_path, exec_time, script.exec_once, script.regexp_main, res.returncode, script_msgs
       )
       self.db.add_log(script.name, log)
-      logging.debug(f"script res: {res}, invoke end time: {exec_time}")
+      logging.debug(f"script res code: {res.returncode}, invoke end time: {exec_time}")
       logging.debug("--- invoke end ---")
       return
-    except CalledProcessError as e:
-      err_msg = f"(script caller): CalledProcessError during invoke: {e}"
     except Exception as e:
-      err_msg = f"(script caller): Exception during invoke: {e}"
+      err_msg = f"(script caller err): Exception during invoke: {e}"
     logging.error(err_msg)
     log = ScriptExecutionLog(
       msg.subject,
@@ -152,7 +152,7 @@ class MailClient:
       script.exec_once,
       script.regexp_main,
       Defaults.GENERIC_ERROR_RETURN_CODE,
-      err_msg,
+      [err_msg],
     )
     self.db.add_log(script.name, log)
     logging.debug("--- invoke end (err) ---")
